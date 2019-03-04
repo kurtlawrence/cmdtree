@@ -13,3 +13,7 @@ edition = "2018"
 
 [badges]
 travis-ci = { repository = "kurtlawrence/cmdtree" }
+
+[dependencies]
+colored = "1.7"
+linefeed = "0.5"
