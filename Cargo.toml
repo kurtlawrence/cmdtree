@@ -1,0 +1,15 @@
+[package]
+name = "cmdr"
+version = "0.0.1"
+authors = ["kurt <kurtlawrence92@gmail.com>"]
+description = "(Rust) commands tree"
+license = "MIT"
+homepage = "https://github.com/kurtlawrence/cmdr"
+repository = "https://github.com/kurtlawrence/cmdr"
+documentation = "https://docs.rs/cmdr/"
+readme = "README.md"
+keywords = [ "cli", "command", "tree" ]
+edition = "2018"
+
+[badges]
+travis-ci = { repository = "kurtlawrence/cmdr" }
