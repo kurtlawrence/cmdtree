@@ -13,22 +13,63 @@
 use colored::*;
 use linefeed::{Interface, ReadResult};
 use std::cell::RefCell;
+use std::fmt;
+use std::rc::Rc;
 
 mod builder;
 mod parse;
 
-pub use self::builder::CommanderBuilder;
-use self::parse::WordResult;
+use self::parse::LineResult;
+pub use builder::Builder;
 
-pub struct Commander<'a> {
-	root: SubClass<'a>,
+pub struct Commander<'r> {
+	root: Rc<SubClass<'r>>,
+	current: Rc<SubClass<'r>>,
 }
 
+impl<'r> Commander<'r> {
+	pub fn prompt(&self) -> &str {
+		&self.current.name
+	}
+
+	pub fn run(mut self) {
+		let interface = Interface::new("commander").expect("failed to start interface");
+		let mut exit = false;
+
+		while !exit {
+			interface
+				.set_prompt(&format!("{}=> ", self.prompt().bright_cyan()))
+				.expect("failed to set prompt");
+
+			match interface.read_line() {
+				Ok(ReadResult::Input(s)) => match self.parse_line(&s, true, &mut std::io::stdout())
+				{
+					LineResult::Exit => exit = true,
+					_ => (),
+				},
+				_ => (),
+			}
+		}
+	}
+}
+
+#[derive(Debug, PartialEq)]
 pub struct SubClass<'a> {
 	name: String,
 	help: &'a str,
-	classes: Vec<SubClass<'a>>,
+	classes: Vec<Rc<SubClass<'a>>>,
 	actions: Vec<Action<'a>>,
+}
+
+impl<'a> SubClass<'a> {
+	fn with_name(name: &str, help_msg: &'a str) -> Self {
+		SubClass {
+			name: name.to_lowercase(),
+			help: help_msg,
+			classes: Vec::new(),
+			actions: Vec::new(),
+		}
+	}
 }
 
 struct Action<'a> {
@@ -44,91 +85,14 @@ impl<'a> Action<'a> {
 	}
 }
 
-impl<'a> Commander<'a> {
-	pub fn run(self) {
-		let interface = Interface::new("commander").expect("failed to start interface");
-		let mut current_class = &self.root;
-		let mut exit = false;
-
-		while !exit {
-			interface
-				.set_prompt(&format!("{}=> ", current_class.name.bright_cyan()))
-				.expect("failed to set prompt");
-
-			match interface.read_line() {
-				Ok(ReadResult::Input(s)) => {
-					let words: Vec<_> = s.split(' ').collect();
-					let mut idx = 0;
-					let mut words_iter = words.iter();
-					let mut next_word = words_iter.next();
-					let start_class = current_class;
-
-					while let Some(word) = next_word {
-						idx += 1;
-						next_word = match parse::parse_word(current_class, word) {
-							WordResult::Help(sc) => {
-								print_help(&sc);
-								current_class = start_class;
-								None
-							}
-							WordResult::Cancel => {
-								current_class = &self.root;
-								None
-							}
-							WordResult::Exit => {
-								exit = true;
-								None
-							}
-							WordResult::Class(sc) => {
-								current_class = sc;
-								words_iter.next()
-							}
-							WordResult::Action(a) => {
-								let slice = &words[idx..];
-								a.call(slice);
-								current_class = start_class;
-								None
-							}
-							WordResult::Unrecognized => {
-								println!(
-									"{}",
-									format!(
-										"'{}' does not match any keywords, classes, or actions",
-										word
-									)
-									.bright_red()
-								);
-								current_class = start_class;
-								None
-							}
-						};
-					}
-				}
-				_ => (),
-			}
-		}
+impl<'a> PartialEq for Action<'a> {
+	fn eq(&self, other: &Self) -> bool {
+		self.name == other.name && self.help == other.help
 	}
 }
 
-fn print_help(class: &SubClass) {
-	println!("{} -- prints the help messages", "help".bright_yellow());
-	println!(
-		"{} | {} -- returns to the root class",
-		"cancel".bright_yellow(),
-		"c".bright_yellow()
-	);
-	println!("{} -- exits the interactive loop", "exit".bright_yellow());
-	if class.classes.len() > 0 {
-		println!("{}", "Classes:".bright_purple());
-		for class in class.classes.iter() {
-			println!("\t{} -- {}", class.name.bright_yellow(), class.help);
-		}
-	}
-
-	if class.actions.len() > 0 {
-		println!("{}", "Actions:".bright_purple());
-		for action in class.actions.iter() {
-			println!("\t{} -- {}", action.name.bright_yellow(), action.help);
-		}
+impl<'a> fmt::Debug for Action<'a> {
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+		write!(f, "Action {{ name: {}, help: {} }}", self.name, self.help)
 	}
 }

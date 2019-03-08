@@ -1,13 +1,13 @@
 use super::*;
 
-pub struct CommanderBuilder<'a> {
+pub struct Builder<'a> {
 	parents: Vec<SubClass<'a>>,
 	current: SubClass<'a>,
 }
 
-impl<'a> CommanderBuilder<'a> {
+impl<'a> Builder<'a> {
 	pub fn new(root_name: &str) -> Self {
-		CommanderBuilder {
+		Builder {
 			parents: Vec::new(),
 			current: SubClass::with_name(root_name, "base class of commander tree"),
 		}
@@ -26,7 +26,7 @@ impl<'a> CommanderBuilder<'a> {
 			.parents
 			.pop()
 			.ok_or("called end_class when there are no parents left")?;
-		parent.classes.push(self.current); // push the child class onto the parent's classes vector
+		parent.classes.push(Rc::new(self.current)); // push the child class onto the parent's classes vector
 		self.current = parent;
 		Ok(self)
 	}
@@ -50,22 +50,15 @@ impl<'a> CommanderBuilder<'a> {
 		})
 	}
 
-	pub fn into_commander(self) -> Result<Commander<'a>, &'static str> {
-		if self.parents.len() > 0 {
-			Err("trying to turn builder into commander tree when there are parent classes")
-		} else {
-			Ok(Commander { root: self.current })
+	pub fn into_commander<'c>(self) -> Commander<'a> {
+		let mut root = self;
+		while root.parents.len() > 0 {
+			root = root.end_class().expect("shouldn't dip below zero parents");
 		}
-	}
-}
-
-impl<'a> SubClass<'a> {
-	fn with_name(name: &str, help_msg: &'a str) -> Self {
-		SubClass {
-			name: name.to_lowercase(),
-			help: help_msg,
-			classes: Vec::new(),
-			actions: Vec::new(),
+		let rc = Rc::new(root.current);
+		Commander {
+			root: Rc::clone(&rc),
+			current: Rc::clone(&rc),
 		}
 	}
 }
@@ -103,7 +96,8 @@ mod tests {
 	fn check_names_test() {
 		let mut sc = SubClass::with_name("name", "adsf");
 		assert_eq!(check_names("name1", &sc), Ok(()));
-		sc.classes.push(SubClass::with_name("sub-name", "asdf"));
+		sc.classes
+			.push(Rc::new(SubClass::with_name("sub-name", "asdf")));
 		assert_eq!(check_names("name1", &sc), Ok(()));
 		assert_eq!(
 			check_names("sub-name", &sc),
