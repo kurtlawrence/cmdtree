@@ -15,14 +15,16 @@ use linefeed::{Interface, ReadResult};
 use std::cell::RefCell;
 
 mod builder;
+mod parse;
 
 pub use self::builder::CommanderBuilder;
+use self::parse::WordResult;
 
 pub struct Commander<'a> {
 	root: SubClass<'a>,
 }
 
-struct SubClass<'a> {
+pub struct SubClass<'a> {
 	name: String,
 	help: &'a str,
 	classes: Vec<SubClass<'a>>,
@@ -43,7 +45,7 @@ impl<'a> Action<'a> {
 }
 
 impl<'a> Commander<'a> {
-	pub fn run_interactively(self) {
+	pub fn run(self) {
 		let interface = Interface::new("commander").expect("failed to start interface");
 		let mut current_class = &self.root;
 		let mut exit = false;
@@ -63,32 +65,39 @@ impl<'a> Commander<'a> {
 
 					while let Some(word) = next_word {
 						idx += 1;
-						next_word = match parse_word(current_class, word) {
-							Ok(CommandResult::Help(sc)) => {
+						next_word = match parse::parse_word(current_class, word) {
+							WordResult::Help(sc) => {
 								print_help(&sc);
 								current_class = start_class;
 								None
 							}
-							Ok(CommandResult::Cancel) => {
+							WordResult::Cancel => {
 								current_class = &self.root;
 								None
 							}
-							Ok(CommandResult::Exit) => {
+							WordResult::Exit => {
 								exit = true;
 								None
 							}
-							Ok(CommandResult::Class(sc)) => {
+							WordResult::Class(sc) => {
 								current_class = sc;
 								words_iter.next()
 							}
-							Ok(CommandResult::Action(a)) => {
+							WordResult::Action(a) => {
 								let slice = &words[idx..];
 								a.call(slice);
 								current_class = start_class;
 								None
 							}
-							Err(s) => {
-								println!("{}", s.bright_red());
+							WordResult::Unrecognized => {
+								println!(
+									"{}",
+									format!(
+										"'{}' does not match any keywords, classes, or actions",
+										word
+									)
+									.bright_red()
+								);
 								current_class = start_class;
 								None
 							}
@@ -122,36 +131,4 @@ fn print_help(class: &SubClass) {
 			println!("\t{} -- {}", action.name.bright_yellow(), action.help);
 		}
 	}
-}
-
-fn parse_word<'a, 'b>(
-	subclass: &'b SubClass<'a>,
-	word: &str,
-) -> Result<CommandResult<'a, 'b>, String> {
-	let lwr = word.to_lowercase();
-	match lwr.as_str() {
-		"help" => Ok(CommandResult::Help(subclass)),
-		"cancel" | "c" => Ok(CommandResult::Cancel),
-		"exit" => Ok(CommandResult::Exit),
-		word => {
-			if let Some(c) = subclass.classes.iter().find(|c| &c.name == word) {
-				Ok(CommandResult::Class(c))
-			} else if let Some(a) = subclass.actions.iter().find(|a| &a.name == word) {
-				Ok(CommandResult::Action(a))
-			} else {
-				Err(format!(
-					"'{}' does not match any keywords, classes, or actions",
-					word
-				))
-			}
-		}
-	}
-}
-
-enum CommandResult<'a, 'b> {
-	Help(&'b SubClass<'a>),
-	Cancel,
-	Exit,
-	Class(&'b SubClass<'a>),
-	Action(&'b Action<'a>),
 }

@@ -10,3 +10,4 @@ Cargo.lock
 **/*.rs.bk
 
 modoc.config
+PUSHING_PROCEDURE.md

@@ -70,7 +70,6 @@ impl<'a> SubClass<'a> {
 	}
 }
 
-
 fn check_names(name: &str, subclass: &SubClass) -> Result<(), BuildError> {
 	let lwr = name.to_lowercase();
 	// check names
@@ -93,33 +92,32 @@ pub enum BuildError {
 mod tests {
 	use super::*;
 
-#[test]
-fn subclass_with_name_test() {
-	let sc = SubClass::with_name("NAME", "Help Message");
-	assert_eq!(&sc.name, "name");
-	assert_eq!(sc.help, "Help Message");
-}
+	#[test]
+	fn subclass_with_name_test() {
+		let sc = SubClass::with_name("NAME", "Help Message");
+		assert_eq!(&sc.name, "name");
+		assert_eq!(sc.help, "Help Message");
+	}
 
-
-#[test]
-fn check_names_test() {
-	let mut sc = SubClass::with_name("name", "adsf");
-	assert_eq!(check_names("name1", &sc), Ok(()));
-	sc.classes.push(SubClass::with_name("sub-name", "asdf"));
-	assert_eq!(check_names("name1", &sc), Ok(()));
-	assert_eq!(
-		check_names("sub-name", &sc),
-		Err(BuildError::NameExistsAsClass)
-	);
-	sc.actions.push(Action {
-		name: "name1".to_string(),
-		help: "adf",
-		closure: RefCell::new(Box::new(|_| ())),
-	});
-	assert_eq!(
-		check_names("name1", &sc),
-		Err(BuildError::NameExistsAsAction)
-	);
-}
+	#[test]
+	fn check_names_test() {
+		let mut sc = SubClass::with_name("name", "adsf");
+		assert_eq!(check_names("name1", &sc), Ok(()));
+		sc.classes.push(SubClass::with_name("sub-name", "asdf"));
+		assert_eq!(check_names("name1", &sc), Ok(()));
+		assert_eq!(
+			check_names("sub-name", &sc),
+			Err(BuildError::NameExistsAsClass)
+		);
+		sc.actions.push(Action {
+			name: "name1".to_string(),
+			help: "adf",
+			closure: RefCell::new(Box::new(|_| ())),
+		});
+		assert_eq!(
+			check_names("name1", &sc),
+			Err(BuildError::NameExistsAsAction)
+		);
+	}
 
 }
