@@ -10,6 +10,8 @@
 //!
 //! Currently WIP placeholder.
 
+#![warn(missing_docs)]
+
 use colored::*;
 use linefeed::{Interface, ReadResult};
 use std::cell::RefCell;
