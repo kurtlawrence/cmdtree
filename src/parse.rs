@@ -179,4 +179,5 @@ mod tests {
 			.push(Rc::new(SubClass::with_name("name", "asdf")));
 		assert_eq!(parse_word(&sc, "NAME"), WordResult::Class(&sc.classes[0]));
 	}
+
 }

@@ -86,13 +86,6 @@ mod tests {
 	use super::*;
 
 	#[test]
-	fn subclass_with_name_test() {
-		let sc = SubClass::with_name("NAME", "Help Message");
-		assert_eq!(&sc.name, "name");
-		assert_eq!(sc.help, "Help Message");
-	}
-
-	#[test]
 	fn check_names_test() {
 		let mut sc = SubClass::with_name("name", "adsf");
 		assert_eq!(check_names("name1", &sc), Ok(()));

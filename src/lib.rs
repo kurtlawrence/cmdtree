@@ -98,3 +98,16 @@ impl<'a> fmt::Debug for Action<'a> {
 		write!(f, "Action {{ name: {}, help: {} }}", self.name, self.help)
 	}
 }
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn subclass_with_name_test() {
+		let sc = SubClass::with_name("NAME", "Help Message");
+		assert_eq!(&sc.name, "name");
+		assert_eq!(sc.help, "Help Message");
+	}
+
+}
