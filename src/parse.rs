@@ -38,7 +38,7 @@ impl<'r> Commander<'r> {
 			next_word = match parse_word(&current_class, word) {
 				WordResult::Help(sc) => {
 					if colorize {
-						write_help_colored(&sc, writer).expect("failed writing output to writer");
+						write_help_coloured(&sc, writer).expect("failed writing output to writer");
 					} else {
 						write_help(&sc, writer).expect("failed writing output to writer");
 					}
@@ -102,7 +102,7 @@ fn parse_word<'a, 'b>(subclass: &'b SubClass<'a>, word: &str) -> WordResult<'a, 
 	}
 }
 
-fn write_help_colored<W: Write>(class: &SubClass, writer: &mut W) -> io::Result<()> {
+fn write_help_coloured<W: Write>(class: &SubClass, writer: &mut W) -> io::Result<()> {
 	writeln!(
 		writer,
 		"{} -- prints the help messages",
@@ -116,7 +116,7 @@ fn write_help_colored<W: Write>(class: &SubClass, writer: &mut W) -> io::Result<
 	)?;
 	writeln!(
 		writer,
-		"{} -- exits the interactive loop",
+		"{} -- sends the exit signal to end the interactive loop",
 		"exit".bright_yellow()
 	)?;
 	if class.classes.len() > 0 {
@@ -144,7 +144,7 @@ fn write_help_colored<W: Write>(class: &SubClass, writer: &mut W) -> io::Result<
 fn write_help<W: Write>(class: &SubClass, writer: &mut W) -> io::Result<()> {
 	writeln!(writer, "help -- prints the help messages",)?;
 	writeln!(writer, "cancel | c -- returns to the root class",)?;
-	writeln!(writer, "exit -- exits the interactive loop",)?;
+	writeln!(writer, "exit -- sends the exit signal to end the interactive loop",)?;
 	if class.classes.len() > 0 {
 		writeln!(writer, "{}", "Classes:")?;
 		for class in class.classes.iter() {
@@ -180,6 +180,63 @@ mod tests {
 			sc.actions.push(Action::blank_fn("action", "adsf"));
 		assert_eq!(parse_word(&sc, "NAME"), WordResult::Class(&sc.classes[0]));
 		assert_eq!(parse_word(&sc, "aCtIoN"), WordResult::Action(&sc.actions[0]));
+	}
+
+	#[test]
+	fn write_help_coloured_test() {
+		let mut sc = SubClass::with_name("Class-Name", "root class");
+		sc.classes.push(Rc::new(SubClass::with_name("class1", "class 1 help")));
+		sc.classes.push(Rc::new(SubClass::with_name("class2", "class 2 help")));
+		sc.actions.push(Action::blank_fn("action1", "action 1 help"));
+		sc.actions.push(Action::blank_fn("action2", "action 2 help"));
+
+		let mut help = Vec::new();
+		write_help_coloured(&sc, &mut help).unwrap();
+		let help = String::from_utf8_lossy(&help);
+
+		assert_eq!(&help, &format!(r#"{} -- prints the help messages
+{} | {} -- returns to the root class
+{} -- sends the exit signal to end the interactive loop
+{}
+	{} -- class 1 help
+	{} -- class 2 help
+{}
+	{} -- action 1 help
+	{} -- action 2 help
+"#, "help".bright_yellow(),
+	"cancel".bright_yellow(), "c".bright_yellow(),
+	"exit".bright_yellow(),
+	"Classes:".bright_purple(),
+	"class1".bright_yellow(),
+	"class2".bright_yellow(),
+	"Actions:".bright_purple(),
+	"action1".bright_yellow(),
+	"action2".bright_yellow())
+);
+	}
+
+	#[test]
+	fn write_help_test() {
+		let mut sc = SubClass::with_name("Class-Name", "root class");
+		sc.classes.push(Rc::new(SubClass::with_name("class1", "class 1 help")));
+		sc.classes.push(Rc::new(SubClass::with_name("class2", "class 2 help")));
+		sc.actions.push(Action::blank_fn("action1", "action 1 help"));
+		sc.actions.push(Action::blank_fn("action2", "action 2 help"));
+
+		let mut help = Vec::new();
+		write_help(&sc, &mut help).unwrap();
+		let help = String::from_utf8_lossy(&help);
+
+		assert_eq!(&help, r#"help -- prints the help messages
+cancel | c -- returns to the root class
+exit -- sends the exit signal to end the interactive loop
+Classes:
+	class1 -- class 1 help
+	class2 -- class 2 help
+Actions:
+	action1 -- action 1 help
+	action2 -- action 2 help
+"#);
 	}
 
 }
