@@ -177,7 +177,9 @@ mod tests {
 
 		sc.classes
 			.push(Rc::new(SubClass::with_name("name", "asdf")));
+			sc.actions.push(Action::blank_fn("action", "adsf"));
 		assert_eq!(parse_word(&sc, "NAME"), WordResult::Class(&sc.classes[0]));
+		assert_eq!(parse_word(&sc, "aCtIoN"), WordResult::Action(&sc.actions[0]));
 	}
 
 }

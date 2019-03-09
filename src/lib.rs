@@ -85,6 +85,15 @@ impl<'a> Action<'a> {
 		let c = &mut *self.closure.borrow_mut();
 		c(arguments);
 	}
+
+	#[cfg(test)]
+	fn blank_fn(name: &str, help_msg: &'a str) -> Self {
+		Action {
+				name: name.to_lowercase(),
+				help: help_msg,
+				closure: RefCell::new(Box::new(|_| ())),
+			}
+	}
 }
 
 impl<'a> PartialEq for Action<'a> {
