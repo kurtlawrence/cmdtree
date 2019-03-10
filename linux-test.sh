@@ -8,5 +8,5 @@ mv tarpaulin-report.html /mnt/c/users/kurt/desktop/tarpaulin-report.html
 wdir="$(pwd)" # get working directory
 cd /mnt/c/users/kurt/desktop # switch to windows desktop
 ./tarpaulin-html-converter.exe # run the converter
-cd wdir # switch back to old dir
+cd "$wdir" # switch back to old dir
 echo "report converted!"
