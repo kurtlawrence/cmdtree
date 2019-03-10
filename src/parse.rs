@@ -1,6 +1,8 @@
 use super::*;
 use std::io::{self, Write};
 
+const PATH_SEP: char = '.';
+
 #[derive(Debug, PartialEq)]
 enum WordResult<'a, 'b> {
 	Help(&'b SubClass<'a>),
@@ -32,6 +34,7 @@ impl<'r> Commander<'r> {
 
 		// if there is no current class, use the root
 		let start_class = Rc::clone(&self.current);
+		let start_path = self.path.clone();
 
 		while let Some(word) = next_word {
 			idx += 1;
@@ -43,16 +46,19 @@ impl<'r> Commander<'r> {
 						write_help(&sc, writer).expect("failed writing output to writer");
 					}
 					self.current = Rc::clone(&start_class);
+					self.path = start_path.clone();
 					None
 				}
 				WordResult::Cancel => {
 					self.current = Rc::clone(&self.root);
+					self.path = self.root.name.clone();
 					None
 				}
 				WordResult::Exit => {
 					return LineResult::Exit;
 				}
 				WordResult::Class(sc) => {
+					self.path.push_str(&format!("{}{}", PATH_SEP, sc.name));
 					self.current = Rc::clone(&sc);
 					words_iter.next()
 				}
@@ -60,6 +66,7 @@ impl<'r> Commander<'r> {
 					let slice = &words[idx..];
 					a.call(slice);
 					self.current = Rc::clone(&start_class);
+					self.path = start_path.clone();
 					None
 				}
 				WordResult::Unrecognized => {
@@ -75,6 +82,7 @@ impl<'r> Commander<'r> {
 
 					writeln!(writer, "{}", s).expect("failed writing output to writer");
 					self.current = Rc::clone(&start_class);
+					self.path = start_path.clone();
 					None
 				}
 			};
@@ -187,9 +195,11 @@ mod tests {
 			})
 			.into_commander();
 
-		let w = &mut std::io::stderr();
+		let w = &mut std::io::sink();
 
 		assert_eq!(cmder.parse_line("adsf", true, w), LineResult::Continue); // unrecognised branch
+		assert_eq!(cmder.current, cmder.root);
+		assert_eq!(cmder.parse_line("adsf", false, w), LineResult::Continue); // unrecognised branch
 		assert_eq!(cmder.current, cmder.root);
 
 		assert_eq!(cmder.parse_line("class1", true, w), LineResult::Continue);
@@ -199,6 +209,11 @@ mod tests {
 		// should be able to action here
 		assert_eq!(
 			cmder.parse_line("class1-class1 action1", true, w),
+			LineResult::Continue
+		);
+		assert_eq!(cmder.current.name, "class1");
+		assert_eq!(
+			cmder.parse_line("class1-class2 action2", true, w),
 			LineResult::Continue
 		);
 		assert_eq!(cmder.current.name, "class1");
