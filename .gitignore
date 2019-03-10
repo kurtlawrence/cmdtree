@@ -11,3 +11,4 @@ Cargo.lock
 
 modoc.config
 PUSHING_PROCEDURE.md
+builder.md

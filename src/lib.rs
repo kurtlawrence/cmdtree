@@ -1,13 +1,13 @@
-//! ([![Build Status](https://travis-ci.com/kurtlawrence/cmdtree.svg?branch=master)](https://travis-ci.com/kurtlawrence/cmdtree)
-//! [![Latest Version](https://img.shields.io/crates/v/cmdtree.svg)](https://crates.io/crates/cmdtree)
-//! [![Rust Documentation](https://img.shields.io/badge/api-rustdoc-blue.svg)](https://docs.rs/cmdtree)
+//! [![Build Status](https://travis-ci.com/kurtlawrence/cmdtree.svg?branch=master)](https://travis-ci.com/kurtlawrence/cmdtree)
+//! [![Latest Version](https://img.shields.io/crates/v/cmdtree.svg)](https://crates.io/crates/cmdtree) 
+//! [![Rust Documentation](https://img.shields.io/badge/api-rustdoc-blue.svg)](https://docs.rs/cmdtree) 
 //! [![codecov](https://codecov.io/gh/kurtlawrence/cmdtree/branch/master/graph/badge.svg)](https://codecov.io/gh/kurtlawrence/cmdtree)
-//!
+//! 
 //! (Rust) commands tree.
-//!
+//! 
 //! See the [rs docs](https://docs.rs/cmdtree/).
 //! Look at progress and contribute on [github.](https://github.com/kurtlawrence/cmdtree)
-//!
+//! 
 //! Currently WIP placeholder.
 
 #![warn(missing_docs)]
@@ -18,12 +18,18 @@ use std::cell::RefCell;
 use std::fmt;
 use std::rc::Rc;
 
-mod builder;
+pub mod builder;
 mod parse;
 
 use self::parse::LineResult;
 pub use builder::{Builder, BuilderChain};
 
+/// A constructed command tree.
+///
+/// Most of the time a user will want to use `run()` which will handle all the parsing and navigating of the tree.
+/// Alternatively, `parse_line` can be used to simulate a read input and update the command tree position.
+///
+/// To construct a command tree, look at the [`builder` module](./builder).
 pub struct Commander<'r> {
 	root: Rc<SubClass<'r>>,
 	current: Rc<SubClass<'r>>,
@@ -31,10 +37,29 @@ pub struct Commander<'r> {
 }
 
 impl<'r> Commander<'r> {
+	/// Return the path of the current class, separated by `.`.
+	///
+	/// # Example
+	/// ```rust
+	/// use cmdtree::*;
+	/// let mut cmder = Builder::default_config("base")
+	///		.begin_class("one", "")
+	///		.begin_class("two", "")
+	///		.into_commander().unwrap();
+	///
+	///	assert_eq!(cmder.path(), "base");
+	///	cmder.parse_line("one two", true,  &mut std::io::sink());
+	///	assert_eq!(cmder.path(), "base.one.two");
+	/// ```
 	pub fn path(&self) -> &str {
 		&self.path
 	}
 
+	/// Run the `Commander` interactively.
+	/// Consumes the instance, and blocks the thread until the loop is exited.
+	/// Reads from `stdin` using [`linefeed::Interface`](https://docs.rs/linefeed/0.5.4/linefeed/interface/struct.Interface.html).
+	///
+	/// This is the most simple way of using a `Commander`.
 	pub fn run(mut self) {
 		let interface = Interface::new("commander").expect("failed to start interface");
 		let mut exit = false;
@@ -134,7 +159,8 @@ mod tests {
 		let mut cmder = Builder::default_config("base")
 			.begin_class("one", "")
 			.begin_class("two", "")
-			.into_commander();
+			.into_commander()
+			.unwrap();
 
 		let w = &mut std::io::sink();
 

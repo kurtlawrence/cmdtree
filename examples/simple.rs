@@ -10,7 +10,7 @@ fn main() {
 				.add_action("name", "print class name", |_| println!("inner-class1", ))
 			.end_class()
 		.end_class()
-		.into_commander();	
+		.into_commander().unwrap();
 
 	cmder.run();	// run interactively
 }

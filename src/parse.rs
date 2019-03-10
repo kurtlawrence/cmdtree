@@ -20,6 +20,28 @@ pub enum LineResult {
 }
 
 impl<'r> Commander<'r> {
+	/// Parse a line of commands and update the `Commander` state.
+	///
+	/// Parsing a line is akin to sending an input line to the commander in the run loop.
+	/// Commands are space separated, and executed within this function, any actions that are specified will be invoked.
+	///
+	/// Most branches result in a `LineResult::Continue` apart from an exit command which will result in a `LineResult::Exit`.
+	/// It is up to the developer to decide on the behaviour.
+	///
+	/// # Example
+	/// ```rust
+	/// use cmdtree::*;
+	/// let mut cmder = Builder::default_config("base")
+	///		.begin_class("one", "")
+	///		.begin_class("two", "")
+	/// 	.add_action("echo", "", |args| println!("{}", args.join(" ")))
+	///		.into_commander().unwrap();
+	///
+	///	assert_eq!(cmder.path(), "base");
+	///	cmder.parse_line("one two", true,  &mut std::io::sink());
+	///	assert_eq!(cmder.path(), "base.one.two");
+	/// cmder.parse_line("echo Hello, world!", true, &mut std::io::sink());	// should print "Hello, world!"
+	/// ```
 	pub fn parse_line<W: Write>(
 		&mut self,
 		line: &str,
@@ -193,7 +215,8 @@ mod tests {
 			.add_action("test-args", "", |args| {
 				assert_eq!(&args, &["one", "two", "three"])
 			})
-			.into_commander();
+			.into_commander()
+			.unwrap();
 
 		let w = &mut std::io::sink();
 
