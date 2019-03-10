@@ -4,12 +4,12 @@ use std::io::{self, Write};
 const PATH_SEP: char = '.';
 
 #[derive(Debug, PartialEq)]
-enum WordResult<'a, 'b> {
-    Help(&'b SubClass<'a>),
+enum WordResult<'a, 'b, R> {
+    Help(&'b SubClass<'a, R>),
     Cancel,
     Exit,
-    Class(&'b Rc<SubClass<'a>>),
-    Action(&'b Action<'a>),
+    Class(&'b Rc<SubClass<'a, R>>),
+    Action(&'b Action<'a, R>),
     Unrecognized,
 }
 
@@ -19,7 +19,7 @@ pub enum LineResult {
     Exit,
 }
 
-impl<'r> Commander<'r> {
+impl<'r, R> Commander<'r, R> {
     /// Parse a line of commands and updates the `Commander` state.
     ///
     /// Parsing a line is akin to sending an input line to the commander in the run loop.
@@ -114,7 +114,7 @@ impl<'r> Commander<'r> {
     }
 }
 
-fn parse_word<'a, 'b>(subclass: &'b SubClass<'a>, word: &str) -> WordResult<'a, 'b> {
+fn parse_word<'a, 'b, R>(subclass: &'b SubClass<'a, R>, word: &str) -> WordResult<'a, 'b, R> {
     let lwr = word.to_lowercase();
     match lwr.as_str() {
         "help" => WordResult::Help(subclass),
@@ -132,7 +132,7 @@ fn parse_word<'a, 'b>(subclass: &'b SubClass<'a>, word: &str) -> WordResult<'a, 
     }
 }
 
-fn write_help_coloured<W: Write>(class: &SubClass, writer: &mut W) -> io::Result<()> {
+fn write_help_coloured<W: Write, R>(class: &SubClass<'_, R>, writer: &mut W) -> io::Result<()> {
     writeln!(
         writer,
         "{} -- prints the help messages",
@@ -171,7 +171,7 @@ fn write_help_coloured<W: Write>(class: &SubClass, writer: &mut W) -> io::Result
     Ok(())
 }
 
-fn write_help<W: Write>(class: &SubClass, writer: &mut W) -> io::Result<()> {
+fn write_help<W: Write, R>(class: &SubClass<'_, R>, writer: &mut W) -> io::Result<()> {
     writeln!(writer, "help -- prints the help messages",)?;
     writeln!(writer, "cancel | c -- returns to the root class",)?;
     writeln!(
