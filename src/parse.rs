@@ -13,13 +13,21 @@ enum WordResult<'a, 'b, R> {
     Unrecognized,
 }
 
+/// The result variants of `parse_line`.
 #[derive(Debug, PartialEq)]
 pub enum LineResult<R> {
+	/// `help` command reached.
     Help,
+	/// `cancel` commannd reached.
     Cancel,
+	/// `exit` command reached.
     Exit,
+	/// Navigated to a class.
     Class,
+	/// Action invoked.
+	/// The inner data is the returned data from invocation.
     Action(R),
+	/// No commands recognised.
     Unrecognized,
 }
 

@@ -99,7 +99,7 @@ use std::rc::Rc;
 pub mod builder;
 mod parse;
 
-use self::parse::LineResult;
+pub use self::parse::LineResult;
 pub use builder::{Builder, BuilderChain};
 
 /// A constructed command tree.
