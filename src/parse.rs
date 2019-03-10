@@ -14,9 +14,13 @@ enum WordResult<'a, 'b, R> {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum LineResult {
-    Continue,
+pub enum LineResult<R> {
+    Help,
+    Cancel,
     Exit,
+    Class,
+    Action(R),
+    Unrecognized,
 }
 
 impl<'r, R> Commander<'r, R> {
@@ -47,7 +51,7 @@ impl<'r, R> Commander<'r, R> {
         line: &str,
         colourise: bool,
         writer: &mut W,
-    ) -> LineResult {
+    ) -> LineResult<R> {
         let line = line.replace("\n", "").replace("\r", "");
         let words: Vec<_> = line.trim().split(' ').collect();
         let mut idx = 0;
@@ -69,12 +73,12 @@ impl<'r, R> Commander<'r, R> {
                     }
                     self.current = Rc::clone(&start_class);
                     self.path = start_path.clone();
-                    None
+                    return LineResult::Help;
                 }
                 WordResult::Cancel => {
                     self.current = Rc::clone(&self.root);
                     self.path = self.root.name.clone();
-                    None
+                    return LineResult::Cancel;
                 }
                 WordResult::Exit => {
                     return LineResult::Exit;
@@ -86,10 +90,10 @@ impl<'r, R> Commander<'r, R> {
                 }
                 WordResult::Action(a) => {
                     let slice = &words[idx..];
-                    a.call(slice);
+                    let r = a.call(slice);
                     self.current = Rc::clone(&start_class);
                     self.path = start_path.clone();
-                    None
+                    return LineResult::Action(r);
                 }
                 WordResult::Unrecognized => {
                     let mut s = format!(
@@ -105,12 +109,12 @@ impl<'r, R> Commander<'r, R> {
                     writeln!(writer, "{}", s).expect("failed writing output to writer");
                     self.current = Rc::clone(&start_class);
                     self.path = start_path.clone();
-                    None
+                    return LineResult::Unrecognized;
                 }
             };
         }
 
-        LineResult::Continue
+        LineResult::Class // default
     }
 }
 
@@ -220,42 +224,42 @@ mod tests {
 
         let w = &mut std::io::sink();
 
-        assert_eq!(cmder.parse_line("adsf", true, w), LineResult::Continue); // unrecognised branch
+        assert_eq!(cmder.parse_line("adsf", true, w), LineResult::Unrecognized); // unrecognised branch
         assert_eq!(cmder.current, cmder.root);
-        assert_eq!(cmder.parse_line("adsf", false, w), LineResult::Continue); // unrecognised branch
+        assert_eq!(cmder.parse_line("adsf", false, w), LineResult::Unrecognized); // unrecognised branch
         assert_eq!(cmder.current, cmder.root);
 
-        assert_eq!(cmder.parse_line("class1", true, w), LineResult::Continue);
+        assert_eq!(cmder.parse_line("class1", true, w), LineResult::Class);
         assert_ne!(cmder.current, cmder.root);
         assert_eq!(cmder.current.name, "class1");
 
         // should be able to action here
         assert_eq!(
             cmder.parse_line("class1-class1 action1", true, w),
-            LineResult::Continue
+            LineResult::Action(())
         );
         assert_eq!(cmder.current.name, "class1");
         assert_eq!(
             cmder.parse_line("class1-class2 action2", true, w),
-            LineResult::Continue
+            LineResult::Action(())
         );
         assert_eq!(cmder.current.name, "class1");
 
         // get back to root
-        assert_eq!(cmder.parse_line("cancel", true, w), LineResult::Continue);
+        assert_eq!(cmder.parse_line("cancel", true, w), LineResult::Cancel);
         assert_eq!(cmder.current.name, "test");
 
         // test args
         assert_eq!(
             cmder.parse_line("test-args one two three", true, w),
-            LineResult::Continue
+            LineResult::Action(())
         );
         assert_eq!(cmder.current.name, "test");
 
         // test help
-        assert_eq!(cmder.parse_line("help", true, w), LineResult::Continue);
+        assert_eq!(cmder.parse_line("help", true, w), LineResult::Help);
         assert_eq!(cmder.current.name, "test");
-        assert_eq!(cmder.parse_line("help", false, w), LineResult::Continue);
+        assert_eq!(cmder.parse_line("help", false, w), LineResult::Help);
         assert_eq!(cmder.current.name, "test");
 
         // test exit

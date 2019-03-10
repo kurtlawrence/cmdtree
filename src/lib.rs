@@ -133,6 +133,24 @@ impl<'r, R> Commander<'r, R> {
         &self.path
     }
 
+    /// Returns if the commander is sitting at the root class.
+    ///
+    /// # Example
+    /// ```rust
+    /// use cmdtree::*;
+    /// let mut cmder = Builder::default_config("base")
+    ///		.begin_class("one", "")
+    ///		.begin_class("two", "")
+    ///		.into_commander().unwrap();
+    ///
+    ///	assert!(cmder.at_root());
+    ///	cmder.parse_line("one two", true,  &mut std::io::sink());
+    ///	assert_eq!(cmder.at_root(), false);
+    /// ```
+    pub fn at_root(&self) -> bool {
+        self.current == self.root
+    }
+
     /// Run the `Commander` interactively.
     /// Consumes the instance, and blocks the thread until the loop is exited.
     /// Reads from `stdin` using [`linefeed::Interface`](https://docs.rs/linefeed/0.5.4/linefeed/interface/struct.Interface.html).
@@ -159,7 +177,7 @@ impl<'r, R> Commander<'r, R> {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Eq)]
 struct SubClass<'a, R> {
     name: String,
     help: &'a str,
@@ -175,6 +193,15 @@ impl<'a, R> SubClass<'a, R> {
             classes: Vec::new(),
             actions: Vec::new(),
         }
+    }
+}
+
+impl<'a, R> PartialEq for SubClass<'a, R> {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name
+            && self.help == other.help
+            && self.classes == other.classes
+            && self.actions == other.actions
     }
 }
 
@@ -207,6 +234,8 @@ impl<'a, R> PartialEq for Action<'a, R> {
         self.name == other.name && self.help == other.help
     }
 }
+
+impl<'a, R> Eq for Action<'a, R> {}
 
 impl<'a, R> fmt::Debug for Action<'a, R> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

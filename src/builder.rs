@@ -59,6 +59,13 @@ pub type BuilderResult<'a, R> = Result<Builder<'a, R>, BuildError>;
 impl<'a> Builder<'a, ()> {
     /// Initialise a `Builder` instance with the given root name.
     pub fn default_config(root_name: &str) -> Self {
+        Builder::<()>::new(root_name)
+    }
+}
+
+impl<'a, R> Builder<'a, R> {
+    /// Initialise new `Builder` instance with no configuration.
+    pub fn new(root_name: &str) -> Self {
         Builder {
             parents: Vec::new(),
             current: SubClass::with_name(root_name, "base class of commander tree"),
