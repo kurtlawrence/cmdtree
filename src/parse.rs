@@ -16,18 +16,18 @@ enum WordResult<'a, 'b, R> {
 /// The result variants of `parse_line`.
 #[derive(Debug, PartialEq)]
 pub enum LineResult<R> {
-	/// `help` command reached.
+    /// `help` command reached.
     Help,
-	/// `cancel` commannd reached.
+    /// `cancel` commannd reached.
     Cancel,
-	/// `exit` command reached.
+    /// `exit` command reached.
     Exit,
-	/// Navigated to a class.
+    /// Navigated to a class.
     Class,
-	/// Action invoked.
-	/// The inner data is the returned data from invocation.
+    /// Action invoked.
+    /// The inner data is the returned data from invocation.
     Action(R),
-	/// No commands recognised.
+    /// No commands recognised.
     Unrecognized,
 }
 
