@@ -42,6 +42,10 @@ pub trait BuilderChain<'a, R> {
         help_msg: &'a str,
         closure: F,
     ) -> BuilderResult<'a, R>;
+
+    /// Navigates to the root class, closing out the classes as it goes.
+    fn root(self) -> BuilderResult<'a, R>;
+
     /// Finishes the construction of the command tree and returns the build `Commander`.
     ///
     /// # Note
@@ -89,6 +93,14 @@ impl<'a, R> BuilderChain<'a, R> for Builder<'a, R> {
         Ok(self)
     }
 
+    fn root(self) -> BuilderResult<'a, R> {
+        let mut root = self;
+        while root.parents.len() > 0 {
+            root = root.end_class().expect("shouldn't dip below zero parents");
+        }
+        Ok(root)
+    }
+
     fn add_action<F>(mut self, name: &str, help_msg: &'a str, closure: F) -> BuilderResult<'a, R>
     where
         F: FnMut(&[&str]) -> R + 'a,
@@ -104,10 +116,7 @@ impl<'a, R> BuilderChain<'a, R> for Builder<'a, R> {
     }
 
     fn into_commander<'c>(self) -> Result<Commander<'a, R>, BuildError> {
-        let mut root = self;
-        while root.parents.len() > 0 {
-            root = root.end_class().expect("shouldn't dip below zero parents");
-        }
+        let root = self.root()?;
         let rc = Rc::new(root.current);
         Ok(Commander {
             root: Rc::clone(&rc),
@@ -124,6 +133,10 @@ impl<'a, R> BuilderChain<'a, R> for BuilderResult<'a, R> {
 
     fn end_class(self) -> BuilderResult<'a, R> {
         self?.end_class()
+    }
+
+    fn root(self) -> BuilderResult<'a, R> {
+        self?.root()
     }
 
     fn add_action<F: FnMut(&[&str]) -> R + 'a>(
