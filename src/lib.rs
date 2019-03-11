@@ -100,7 +100,7 @@ pub mod builder;
 mod parse;
 
 pub use self::parse::LineResult;
-pub use builder::{Builder, BuilderChain};
+pub use builder::{BuildError, Builder, BuilderChain};
 
 /// A constructed command tree.
 ///
