@@ -210,4 +210,16 @@ mod tests {
         let cmdr = Builder::default_config("adf").begin_class("help", "shouldn't work");
         assert_eq!(cmdr, Err(BuildError::NameExistsAsAction));
     }
+
+    #[test]
+    fn builder_root_test() {
+        let cmdr = Builder::default_config("root")
+            .begin_class("adsf", "adf")
+            .begin_class("adsf", "adsf")
+            .begin_class("asdf", "adsf")
+            .root()
+            .unwrap();
+        assert_eq!(cmdr.parents.len(), 0);
+        assert_eq!(cmdr.current.name, "root");
+    }
 }
