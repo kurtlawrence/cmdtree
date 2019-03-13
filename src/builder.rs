@@ -1,14 +1,14 @@
 //! Builder Pattern
-//!
+//! 
 //! To construct a `Commander` a `Builder` is used. It allows chaining together the common actions, whilst also construct the structure of the tree in an ergonomic manner.
 //! The builder pattern is supported by the [`BuilderChain`](./trait.BuilderChain.html) trait, which is implemented on the `Builder` struct, and also the common result type `BuilderResult`.
 //! This allows for chaining methods without needing to intersperse `.unwrap()` or `.expect()` calls everywhere.
-//!
+//! 
 //! # Example
-//!
+//! 
 //! ```rust
 //! use cmdtree::*;
-//!
+//! 
 //! let cmder = Builder::default_config("cmdtree-example")
 //! 	.begin_class("class1", "class1 help message")
 //! 		.begin_class("inner-class1", "nested class!")
