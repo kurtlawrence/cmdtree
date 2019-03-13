@@ -2,7 +2,8 @@
 
 ## 0.3.0
 
-- Added `root()` to `BuilderChain` which short-circuits back to the root
+- Added `root()` to `BuilderChain` which short-circuits back to the root.
+- Added `at_root()` to `Commander` to flag if currently sitting on root.
 
 ## 0.2.0
 
