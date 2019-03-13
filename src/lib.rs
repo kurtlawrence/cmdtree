@@ -109,179 +109,198 @@ pub use builder::{BuildError, Builder, BuilderChain};
 ///
 /// To construct a command tree, look at the [`builder` module](./builder/index.html).
 pub struct Commander<'r, R> {
-    root: Rc<SubClass<'r, R>>,
-    current: Rc<SubClass<'r, R>>,
-    path: String,
+	root: Rc<SubClass<'r, R>>,
+	current: Rc<SubClass<'r, R>>,
+	path: String,
 }
 
 impl<'r, R> Commander<'r, R> {
-    /// Return the path of the current class, separated by `.`.
-    ///
-    /// # Example
-    /// ```rust
-    /// use cmdtree::*;
-    /// let mut cmder = Builder::default_config("base")
-    ///		.begin_class("one", "")
-    ///		.begin_class("two", "")
-    ///		.into_commander().unwrap();
-    ///
-    ///	assert_eq!(cmder.path(), "base");
-    ///	cmder.parse_line("one two", true,  &mut std::io::sink());
-    ///	assert_eq!(cmder.path(), "base.one.two");
-    /// ```
-    pub fn path(&self) -> &str {
-        &self.path
-    }
+	/// Return the path of the current class, separated by `.`.
+	///
+	/// # Example
+	/// ```rust
+	/// use cmdtree::*;
+	/// let mut cmder = Builder::default_config("base")
+	///		.begin_class("one", "")
+	///		.begin_class("two", "")
+	///		.into_commander().unwrap();
+	///
+	///	assert_eq!(cmder.path(), "base");
+	///	cmder.parse_line("one two", true,  &mut std::io::sink());
+	///	assert_eq!(cmder.path(), "base.one.two");
+	/// ```
+	pub fn path(&self) -> &str {
+		&self.path
+	}
 
-    /// Returns if the commander is sitting at the root class.
-    ///
-    /// # Example
-    /// ```rust
-    /// use cmdtree::*;
-    /// let mut cmder = Builder::default_config("base")
-    ///		.begin_class("one", "")
-    ///		.begin_class("two", "")
-    ///		.into_commander().unwrap();
-    ///
-    ///	assert!(cmder.at_root());
-    ///	cmder.parse_line("one two", true,  &mut std::io::sink());
-    ///	assert_eq!(cmder.at_root(), false);
-    /// ```
-    pub fn at_root(&self) -> bool {
-        self.current == self.root
-    }
+	/// Returns if the commander is sitting at the root class.
+	///
+	/// # Example
+	/// ```rust
+	/// use cmdtree::*;
+	/// let mut cmder = Builder::default_config("base")
+	///		.begin_class("one", "")
+	///		.begin_class("two", "")
+	///		.into_commander().unwrap();
+	///
+	///	assert!(cmder.at_root());
+	///	cmder.parse_line("one two", true,  &mut std::io::sink());
+	///	assert_eq!(cmder.at_root(), false);
+	/// ```
+	pub fn at_root(&self) -> bool {
+		self.current == self.root
+	}
 
-    /// Run the `Commander` interactively.
-    /// Consumes the instance, and blocks the thread until the loop is exited.
-    /// Reads from `stdin` using [`linefeed::Interface`](https://docs.rs/linefeed/0.5.4/linefeed/interface/struct.Interface.html).
-    ///
-    /// This is the most simple way of using a `Commander`.
-    pub fn run(mut self) {
-        let interface = Interface::new("commander").expect("failed to start interface");
-        let mut exit = false;
+	/// Run the `Commander` interactively.
+	/// Consumes the instance, and blocks the thread until the loop is exited.
+	/// Reads from `stdin` using [`linefeed::Interface`](https://docs.rs/linefeed/0.5.4/linefeed/interface/struct.Interface.html).
+	///
+	/// This is the most simple way of using a `Commander`.
+	pub fn run(mut self) {
+		let interface = Interface::new("commander").expect("failed to start interface");
+		let mut exit = false;
 
-        while !exit {
-            interface
-                .set_prompt(&format!("{}=> ", self.path().bright_cyan()))
-                .expect("failed to set prompt");
+		while !exit {
+			interface
+				.set_prompt(&format!("{}=> ", self.path().bright_cyan()))
+				.expect("failed to set prompt");
 
-            match interface.read_line() {
-                Ok(ReadResult::Input(s)) => match self.parse_line(&s, true, &mut std::io::stdout())
-                {
-                    LineResult::Exit => exit = true,
-                    _ => (),
-                },
-                _ => (),
-            }
-        }
-    }
+			match interface.read_line() {
+				Ok(ReadResult::Input(s)) => match self.parse_line(&s, true, &mut std::io::stdout())
+				{
+					LineResult::Exit => exit = true,
+					_ => (),
+				},
+				_ => (),
+			}
+		}
+	}
 }
 
 #[derive(Debug, Eq)]
 struct SubClass<'a, R> {
-    name: String,
-    help: &'a str,
-    classes: Vec<Rc<SubClass<'a, R>>>,
-    actions: Vec<Action<'a, R>>,
+	name: String,
+	help: &'a str,
+	classes: Vec<Rc<SubClass<'a, R>>>,
+	actions: Vec<Action<'a, R>>,
 }
 
 impl<'a, R> SubClass<'a, R> {
-    fn with_name(name: &str, help_msg: &'a str) -> Self {
-        SubClass {
-            name: name.to_lowercase(),
-            help: help_msg,
-            classes: Vec::new(),
-            actions: Vec::new(),
-        }
-    }
+	fn with_name(name: &str, help_msg: &'a str) -> Self {
+		SubClass {
+			name: name.to_lowercase(),
+			help: help_msg,
+			classes: Vec::new(),
+			actions: Vec::new(),
+		}
+	}
 }
 
 impl<'a, R> PartialEq for SubClass<'a, R> {
-    fn eq(&self, other: &Self) -> bool {
-        self.name == other.name
-            && self.help == other.help
-            && self.classes == other.classes
-            && self.actions == other.actions
-    }
+	fn eq(&self, other: &Self) -> bool {
+		self.name == other.name
+			&& self.help == other.help
+			&& self.classes == other.classes
+			&& self.actions == other.actions
+	}
 }
 
 struct Action<'a, R> {
-    name: String,
-    help: &'a str,
-    closure: RefCell<Box<FnMut(&[&str]) -> R + 'a>>,
+	name: String,
+	help: &'a str,
+	closure: RefCell<Box<FnMut(&[&str]) -> R + 'a>>,
 }
 
 impl<'a, R> Action<'a, R> {
-    fn call(&self, arguments: &[&str]) -> R {
-        let c = &mut *self.closure.borrow_mut();
-        c(arguments)
-    }
+	fn call(&self, arguments: &[&str]) -> R {
+		let c = &mut *self.closure.borrow_mut();
+		c(arguments)
+	}
 }
 
 impl<'a> Action<'a, ()> {
-    #[cfg(test)]
-    fn blank_fn(name: &str, help_msg: &'a str) -> Self {
-        Action {
-            name: name.to_lowercase(),
-            help: help_msg,
-            closure: RefCell::new(Box::new(|_| ())),
-        }
-    }
+	#[cfg(test)]
+	fn blank_fn(name: &str, help_msg: &'a str) -> Self {
+		Action {
+			name: name.to_lowercase(),
+			help: help_msg,
+			closure: RefCell::new(Box::new(|_| ())),
+		}
+	}
 }
 
 impl<'a, R> PartialEq for Action<'a, R> {
-    fn eq(&self, other: &Self) -> bool {
-        self.name == other.name && self.help == other.help
-    }
+	fn eq(&self, other: &Self) -> bool {
+		self.name == other.name && self.help == other.help
+	}
 }
 
 impl<'a, R> Eq for Action<'a, R> {}
 
 impl<'a, R> fmt::Debug for Action<'a, R> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Action {{ name: {}, help: {} }}", self.name, self.help)
-    }
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+		write!(f, "Action {{ name: {}, help: {} }}", self.name, self.help)
+	}
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+	use super::*;
 
-    #[test]
-    fn subclass_with_name_test() {
-        let sc = SubClass::<()>::with_name("NAME", "Help Message");
-        assert_eq!(&sc.name, "name");
-        assert_eq!(sc.help, "Help Message");
-    }
+	#[test]
+	fn subclass_with_name_test() {
+		let sc = SubClass::<()>::with_name("NAME", "Help Message");
+		assert_eq!(&sc.name, "name");
+		assert_eq!(sc.help, "Help Message");
+	}
 
-    #[test]
-    fn action_debug_test() {
-        let a = Action::blank_fn("action-name", "help me!");
-        assert_eq!(
-            &format!("{:?}", a),
-            "Action { name: action-name, help: help me! }"
-        );
-    }
+	#[test]
+	fn action_debug_test() {
+		let a = Action::blank_fn("action-name", "help me!");
+		assert_eq!(
+			&format!("{:?}", a),
+			"Action { name: action-name, help: help me! }"
+		);
+	}
 
-    #[test]
-    fn current_path_test() {
-        let mut cmder = Builder::default_config("base")
-            .begin_class("one", "")
-            .begin_class("two", "")
-            .into_commander()
-            .unwrap();
+	#[test]
+	fn current_path_test() {
+		let mut cmder = Builder::default_config("base")
+			.begin_class("one", "")
+			.begin_class("two", "")
+			.into_commander()
+			.unwrap();
 
-        let w = &mut std::io::sink();
+		let w = &mut std::io::sink();
 
-        assert_eq!(cmder.path(), "base");
+		assert_eq!(cmder.path(), "base");
 
-        cmder.parse_line("one two", true, w);
-        assert_eq!(cmder.path(), "base.one.two");
+		cmder.parse_line("one two", true, w);
+		assert_eq!(cmder.path(), "base.one.two");
 
-        cmder.parse_line("c", true, w);
-        assert_eq!(cmder.path(), "base");
+		cmder.parse_line("c", true, w);
+		assert_eq!(cmder.path(), "base");
 
-        cmder.parse_line("one", true, w);
-        assert_eq!(cmder.path(), "base.one");
-    }
+		cmder.parse_line("one", true, w);
+		assert_eq!(cmder.path(), "base.one");
+	}
+
+	#[test]
+	fn root_test() {
+		let mut cmder = Builder::default_config("base")
+			.begin_class("one", "")
+			.begin_class("two", "")
+			.into_commander()
+			.unwrap();
+
+		let w = &mut std::io::sink();
+
+		assert_eq!(cmder.at_root(), true);
+
+		cmder.parse_line("one two", true, w);
+		assert_eq!(cmder.at_root(), false);
+
+		cmder.parse_line("c", true, w);
+		assert_eq!(cmder.at_root(), true);
+	}
 }
