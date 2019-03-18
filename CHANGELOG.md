@@ -1,5 +1,9 @@
 # Change Log
 
+## 0.4.0
+
+- Made `Commander` `Send`able, means actions must be `Send`able as well.
+
 ## 0.3.0
 
 - Added `root()` to `BuilderChain` which short-circuits back to the root.

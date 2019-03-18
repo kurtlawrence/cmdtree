@@ -15,7 +15,7 @@ cmdtree uses a builder pattern to make constructing the tree ergonomic.
 
 # Example
 
-```rust ignore
+```rust,no_run
 extern crate cmdtree;
 use cmdtree::*;
 

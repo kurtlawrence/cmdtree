@@ -8,7 +8,7 @@ enum WordResult<'a, 'b, R> {
     Help(&'b SubClass<'a, R>),
     Cancel,
     Exit,
-    Class(&'b Rc<SubClass<'a, R>>),
+    Class(&'b Arc<SubClass<'a, R>>),
     Action(&'b Action<'a, R>),
     Unrecognized,
 }
@@ -67,7 +67,7 @@ impl<'r, R> Commander<'r, R> {
         let mut next_word = words_iter.next();
 
         // if there is no current class, use the root
-        let start_class = Rc::clone(&self.current);
+        let start_class = Arc::clone(&self.current);
         let start_path = self.path.clone();
 
         while let Some(word) = next_word {
@@ -79,12 +79,12 @@ impl<'r, R> Commander<'r, R> {
                     } else {
                         write_help(&sc, writer).expect("failed writing output to writer");
                     }
-                    self.current = Rc::clone(&start_class);
+                    self.current = Arc::clone(&start_class);
                     self.path = start_path.clone();
                     return LineResult::Help;
                 }
                 WordResult::Cancel => {
-                    self.current = Rc::clone(&self.root);
+                    self.current = Arc::clone(&self.root);
                     self.path = self.root.name.clone();
                     return LineResult::Cancel;
                 }
@@ -93,13 +93,13 @@ impl<'r, R> Commander<'r, R> {
                 }
                 WordResult::Class(sc) => {
                     self.path.push_str(&format!("{}{}", PATH_SEP, sc.name));
-                    self.current = Rc::clone(&sc);
+                    self.current = Arc::clone(&sc);
                     words_iter.next()
                 }
                 WordResult::Action(a) => {
                     let slice = &words[idx..];
                     let r = a.call(slice);
-                    self.current = Rc::clone(&start_class);
+                    self.current = Arc::clone(&start_class);
                     self.path = start_path.clone();
                     return LineResult::Action(r);
                 }
@@ -115,7 +115,7 @@ impl<'r, R> Commander<'r, R> {
                     }
 
                     writeln!(writer, "{}", s).expect("failed writing output to writer");
-                    self.current = Rc::clone(&start_class);
+                    self.current = Arc::clone(&start_class);
                     self.path = start_path.clone();
                     return LineResult::Unrecognized;
                 }
@@ -284,7 +284,7 @@ mod tests {
         assert_eq!(parse_word(&sc, "asdf"), WordResult::Unrecognized);
 
         sc.classes
-            .push(Rc::new(SubClass::with_name("name", "asdf")));
+            .push(Arc::new(SubClass::with_name("name", "asdf")));
         sc.actions.push(Action::blank_fn("action", "adsf"));
         assert_eq!(parse_word(&sc, "NAME"), WordResult::Class(&sc.classes[0]));
         assert_eq!(
@@ -297,9 +297,9 @@ mod tests {
     fn write_help_coloured_test() {
         let mut sc = SubClass::with_name("Class-Name", "root class");
         sc.classes
-            .push(Rc::new(SubClass::with_name("class1", "class 1 help")));
+            .push(Arc::new(SubClass::with_name("class1", "class 1 help")));
         sc.classes
-            .push(Rc::new(SubClass::with_name("class2", "class 2 help")));
+            .push(Arc::new(SubClass::with_name("class2", "class 2 help")));
         sc.actions
             .push(Action::blank_fn("action1", "action 1 help"));
         sc.actions
@@ -340,9 +340,9 @@ mod tests {
     fn write_help_test() {
         let mut sc = SubClass::with_name("Class-Name", "root class");
         sc.classes
-            .push(Rc::new(SubClass::with_name("class1", "class 1 help")));
+            .push(Arc::new(SubClass::with_name("class1", "class 1 help")));
         sc.classes
-            .push(Rc::new(SubClass::with_name("class2", "class 2 help")));
+            .push(Arc::new(SubClass::with_name("class2", "class 2 help")));
         sc.actions
             .push(Action::blank_fn("action1", "action 1 help"));
         sc.actions

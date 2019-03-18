@@ -15,7 +15,7 @@
 //! 
 //! # Example
 //! 
-//! ```rust ignore
+//! ```rust,no_run
 //! extern crate cmdtree;
 //! use cmdtree::*;
 //! 
@@ -92,9 +92,8 @@
 
 use colored::*;
 use linefeed::{Interface, ReadResult};
-use std::cell::RefCell;
 use std::fmt;
-use std::rc::Rc;
+use std::sync::{Arc, Mutex};
 
 pub mod builder;
 mod parse;
@@ -109,8 +108,8 @@ pub use builder::{BuildError, Builder, BuilderChain};
 ///
 /// To construct a command tree, look at the [`builder` module](./builder/index.html).
 pub struct Commander<'r, R> {
-	root: Rc<SubClass<'r, R>>,
-	current: Rc<SubClass<'r, R>>,
+	root: Arc<SubClass<'r, R>>,
+	current: Arc<SubClass<'r, R>>,
 	path: String,
 }
 
@@ -181,7 +180,7 @@ impl<'r, R> Commander<'r, R> {
 struct SubClass<'a, R> {
 	name: String,
 	help: &'a str,
-	classes: Vec<Rc<SubClass<'a, R>>>,
+	classes: Vec<Arc<SubClass<'a, R>>>,
 	actions: Vec<Action<'a, R>>,
 }
 
@@ -208,12 +207,12 @@ impl<'a, R> PartialEq for SubClass<'a, R> {
 struct Action<'a, R> {
 	name: String,
 	help: &'a str,
-	closure: RefCell<Box<FnMut(&[&str]) -> R + 'a>>,
+	closure: Mutex<Box<FnMut(&[&str]) -> R + Send + 'a>>,
 }
 
 impl<'a, R> Action<'a, R> {
 	fn call(&self, arguments: &[&str]) -> R {
-		let c = &mut *self.closure.borrow_mut();
+		let c = &mut *self.closure.lock().expect("locking command action failed");
 		c(arguments)
 	}
 }
@@ -224,7 +223,7 @@ impl<'a> Action<'a, ()> {
 		Action {
 			name: name.to_lowercase(),
 			help: help_msg,
-			closure: RefCell::new(Box::new(|_| ())),
+			closure: Mutex::new(Box::new(|_| ())),
 		}
 	}
 }
