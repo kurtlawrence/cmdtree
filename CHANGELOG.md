@@ -4,6 +4,9 @@
 
 - Made `Commander` `Send`able, means actions must be `Send`able as well.
 
+> 0.4.2
+> - When run interactively, history is now stored.
+> 
 > 0.4.1
 > - Added `action_result` fn to `LineResult`
 
