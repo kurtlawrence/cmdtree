@@ -57,7 +57,7 @@ impl<'r, R> Commander<'r, R> {
 	/// let mut cmder = Builder::default_config("base")
 	///		.begin_class("one", "")
 	///		.begin_class("two", "")
-	/// 	.add_action("echo", "", |args| println!("{}", args.join(" ")))
+	/// 	.add_action("echo", "", |_wtr, args| println!("{}", args.join(" ")))
 	///		.into_commander().unwrap();
 	///
 	///	assert_eq!(cmder.path(), "base");
@@ -109,7 +109,7 @@ impl<'r, R> Commander<'r, R> {
 				}
 				WordResult::Action(a) => {
 					let slice = &words[idx..];
-					let r = a.call(slice);
+					let r = a.call(writer, slice);
 					self.current = Arc::clone(&start_class);
 					self.path = start_path.clone();
 					return LineResult::Action(r);
@@ -227,15 +227,15 @@ mod tests {
 		let mut cmder = Builder::default_config("test")
 			.begin_class("class1", "class1 help")
 			.begin_class("class1-class1", "adsf")
-			.add_action("action1", "adf", |_| ())
+			.add_action("action1", "adf", |_, _| ())
 			.end_class()
 			.begin_class("class1-class2", "adsf")
-			.add_action("action2", "adsf", |_| ())
+			.add_action("action2", "adsf", |_, _| ())
 			.end_class()
 			.end_class()
 			.begin_class("class2", "asdf")
 			.end_class()
-			.add_action("test-args", "", |args| {
+			.add_action("test-args", "", |_wtr, args| {
 				assert_eq!(&args, &["one", "two", "three"])
 			})
 			.into_commander()

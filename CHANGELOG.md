@@ -1,5 +1,9 @@
 # Change Log
 
+## 0.5.0
+
+- Actions now pass through the writer (from `parse_line`)
+
 ## 0.4.0
 
 - Made `Commander` `Send`able, means actions must be `Send`able as well.
