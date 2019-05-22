@@ -1,5 +1,9 @@
 # Change Log
 
+## 0.6.0
+
+- Added a `structure()` function on `Commander`
+
 ## 0.5.0
 
 - Actions now pass through the writer (from `parse_line`)
