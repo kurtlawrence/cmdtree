@@ -15,5 +15,5 @@ edition = "2018"
 travis-ci = { repository = "kurtlawrence/cmdtree" }
 
 [dependencies]
-colored = "1.7"
-linefeed = "0.5"
+colored = "1.8"
+linefeed = "0.6"
