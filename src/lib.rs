@@ -197,21 +197,35 @@ impl<'r, R> Commander<'r, R> {
     /// 	.add_action("action", "", |_,_| ())
     ///		.into_commander().unwrap();
     ///
-    /// let structure = cmdr.structure();
+    /// let structure = cmder.structure();
     ///
     /// assert_eq!(structure.iter().map(|x| x.as_str()).collect::<Vec<_>>(), vec![
     /// 	"base",
+	/// 	"base..action",
     /// 	"base.one",
     /// 	"base.one..action",
-    /// 	"base..action",
-    /// 	"base.two",
+    /// 	"base.one.two",
     /// ]);
     pub fn structure(&self) -> BTreeSet<String> {
         let mut set = BTreeSet::new();
 
-        let mut s = parent.name.clone();
+        let mut stack = vec![(self.root.name.clone(), &self.root)];
 
-        let mut stack = vec![Arc::clone(&self.root)];
+        while let Some(item) = stack.pop() {
+            let (parent_path, parent) = item;
+
+            for action in parent.actions.iter() {
+                set.insert(format!("{}..{}", parent_path, action.name));
+            }
+
+            for class in parent.classes.iter() {
+                stack.push((format!("{}.{}", parent_path, class.name), class));
+            }
+
+            set.insert(parent_path);
+        }
+
+        set
     }
 }
 
