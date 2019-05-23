@@ -206,6 +206,7 @@ impl<'r, R> Commander<'r, R> {
     /// 	"base.one..action",
     /// 	"base.one.two",
     /// ]);
+	/// ```
     pub fn structure(&self) -> BTreeSet<String> {
         let mut set = BTreeSet::new();
 
