@@ -118,6 +118,22 @@ pub struct Commander<'r, R> {
 }
 
 impl<'r, R> Commander<'r, R> {
+	/// Return the root name.
+    ///
+    /// # Example
+    /// ```rust
+    /// # use cmdtree::*;
+    /// let mut cmder = Builder::default_config("base")
+    ///		.begin_class("one", "")
+    ///		.begin_class("two", "")
+    ///		.into_commander().unwrap();
+    ///
+    ///	assert_eq!(cmder.root_name(), "base");
+    /// ```
+	pub fn root_name(&self) -> &str {
+		&self.root.name
+	}
+
     /// Return the path of the current class, separated by `.`.
     ///
     /// # Example

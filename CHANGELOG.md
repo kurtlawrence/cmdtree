@@ -4,6 +4,9 @@
 
 - Added a `structure()` function on `Commander`
 
+> 0.6.1
+> - Added `root_name` to `Commander`
+
 ## 0.5.0
 
 - Actions now pass through the writer (from `parse_line`)
