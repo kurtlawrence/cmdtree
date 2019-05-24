@@ -35,25 +35,84 @@ impl<'r, R> Commander<'r, R> {
             }
         }
     }
+}
 
-    pub fn create_tree_completion_items(&self) -> Vec<String> {
-        let cpath = self.path();
+pub fn create_tree_completion_items<R>(cmdr: &Commander<R>) -> Vec<String> {
+    let cpath = cmdr.path();
 
-        self.structure()
-            .into_iter()
-            .map(|x| {
-                x[cpath.len()..].split('.').filter(|x| !x.is_empty()).fold(
-                    String::new(),
-                    |mut s, x| {
-                        if s.len() != 0 {
-                            s.push(' ');
-                        }
-                        s.push_str(x);
-                        s
-                    },
-                )
-            })
-            .collect()
+    cmdr.structure()
+        .into_iter()
+        .map(|x| {
+            x[cpath.len()..]
+                .split('.')
+                .filter(|x| !x.is_empty())
+                .fold(String::new(), |mut s, x| {
+                    if s.len() != 0 {
+                        s.push(' ');
+                    }
+                    s.push_str(x);
+                    s
+                })
+        })
+        .filter(|x| !x.is_empty())
+        .collect()
+}
+
+pub fn tree_completions<'a, I>(line: &str, items: I) -> Option<Vec<Completion>>
+where
+    I: Iterator<Item = &'a String>,
+{
+    let v: Vec<_> = items
+        .filter(|x| x.starts_with(line))
+        .map(|x| {
+            // src code makes word_idx = x.len(), then counts backwards.
+            // will not panic on out of bounds.
+            let word_idx = linefeed::complete::word_break_start(x, " ");
+            Completion::simple(x[word_idx..].to_string())
+        })
+        .collect();
+
+    if v.len() > 0 {
+        Some(v)
+    } else {
+        None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn create_tree_completion_items_test() {
+        let cmder = Builder::default_config("cmdtree-example")
+            .begin_class("class1", "") // a class
+            .begin_class("inner-class1", "") // can nest a class
+            .add_action("name", "print class name", |_, _| ())
+            .end_class()
+            .end_class()
+            .begin_class("print", "")
+            .add_action("echo", "", |_, _| ())
+            .add_action("countdown", "", |_, _| ())
+            .into_commander()
+            .unwrap();
+
+        let v = create_tree_completion_items(&cmder);
+        assert_eq!(
+            v,
+            vec_str(vec![
+                "class1",
+                "class1 inner-class1",
+                "class1 inner-class1 name",
+                "print",
+                "print countdown",
+                "print echo"
+            ])
+        );
+    }
+
+    fn vec_str(v: Vec<&str>) -> Vec<String> {
+        v.into_iter().map(|x| x.to_string()).collect()
     }
 }
 

@@ -17,7 +17,7 @@ fn main() {
         .unwrap();
 
     cmder.run_with_completion(|c| TreeCompleter {
-        items: c.build_tree_completion_items(),
+        items: create_tree_completion_items(c),
     });
 }
 
@@ -28,11 +28,11 @@ struct TreeCompleter {
 impl<T: Terminal> Completer<T> for TreeCompleter {
     fn complete(
         &self,
-        word: &str,
-        prompter: Prompter<T>,
-        start: usize,
-        end: usize,
+        _word: &str,
+        prompter: &Prompter<T>,
+        _start: usize,
+        _end: usize,
     ) -> Option<Vec<Completion>> {
-        None
+        tree_completions(prompter.buffer(), self.items.iter())
     }
 }
