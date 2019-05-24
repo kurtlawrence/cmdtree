@@ -37,11 +37,39 @@ impl<'r, R> Commander<'r, R> {
     }
 }
 
+/// Constructs a set of space delimited items that could be completed at the
+/// current path.
+///
+/// # Examples
+/// ```rust
+/// # use cmdtree::*;
+/// # use cmdtree::completion::create_tree_completion_items;
+///
+/// let mut cmder = Builder::default_config("eg")
+/// 	.begin_class("one", "") // a class
+/// 		.begin_class("two", "")
+/// 		.add_action("three", "", |_, _| ())
+/// 		.end_class()
+/// 	.end_class()
+/// 	.begin_class("hello", "").end_class()
+/// 	.into_commander().unwrap();
+///
+/// let v = create_tree_completion_items(&cmder);
+/// assert_eq!(v, vec!["hello", "one", "one two", "one two three"]
+/// 	.into_iter().map(|x| x.to_string()).collect::<Vec<_>>());
+///
+/// cmder.parse_line("one", true, &mut std::io::sink());
+///
+/// let v = create_tree_completion_items(&cmder);
+/// assert_eq!(v, vec!["two", "two three"]
+/// 	.into_iter().map(|x| x.to_string()).collect::<Vec<_>>());
+/// ```
 pub fn create_tree_completion_items<R>(cmdr: &Commander<R>) -> Vec<String> {
     let cpath = cmdr.path();
 
     cmdr.structure()
         .into_iter()
+        .filter(|x| x.starts_with(cpath))
         .map(|x| {
             x[cpath.len()..]
                 .split('.')
@@ -85,7 +113,7 @@ mod tests {
 
     #[test]
     fn create_tree_completion_items_test() {
-        let cmder = Builder::default_config("cmdtree-example")
+        let mut cmder = Builder::default_config("cmdtree-example")
             .begin_class("class1", "") // a class
             .begin_class("inner-class1", "") // can nest a class
             .add_action("name", "print class name", |_, _| ())
@@ -109,6 +137,11 @@ mod tests {
                 "print echo"
             ])
         );
+
+        cmder.parse_line("class1", true, &mut std::io::sink());
+
+        let v = create_tree_completion_items(&cmder);
+        assert_eq!(v, vec_str(vec!["inner-class1", "inner-class1 name",]));
     }
 
     fn vec_str(v: Vec<&str>) -> Vec<String> {

@@ -95,6 +95,7 @@
 use linefeed::{Interface, ReadResult};
 use std::collections::BTreeSet;
 use std::fmt;
+use std::io::Write;
 use std::sync::{Arc, Mutex};
 
 pub mod builder;
@@ -103,7 +104,6 @@ mod parse;
 
 pub use self::parse::LineResult;
 pub use builder::{BuildError, Builder, BuilderChain};
-pub use std::io::Write;
 
 /// A constructed command tree.
 ///
