@@ -1,7 +1,6 @@
 //! Example on implementing a completer.
 
 use cmdtree::completion::*;
-use cmdtree::*;
 
 fn main() {
     let cmder = Builder::default_config("cmdtree-example")
@@ -33,6 +32,10 @@ impl<T: Terminal> Completer<T> for TreeCompleter {
         _start: usize,
         _end: usize,
     ) -> Option<Vec<Completion>> {
-        tree_completions(prompter.buffer(), self.items.iter())
+        Some(
+            tree_completions(prompter.buffer(), self.items.iter())
+                .map(|x| Completion::simple(x.to_string()))
+                .collect(),
+        )
     }
 }

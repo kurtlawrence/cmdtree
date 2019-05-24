@@ -172,7 +172,6 @@ impl<'r, R> Commander<'r, R> {
 
     /// Run the `Commander` interactively.
     /// Consumes the instance, and blocks the thread until the loop is exited.
-    /// Reads from `stdin` using [`linefeed::Interface`](https://docs.rs/linefeed/0.5.4/linefeed/interface/struct.Interface.html).
     ///
     /// This is the most simple way of using a `Commander`.
     pub fn run(self) {

@@ -1,8 +1,16 @@
+//! Completion of tree paths and action arguments.
+//!
+//! Completion is done functionally, see examples on github for how to implement.
+
 pub use super::*;
 use colored::*;
 pub use linefeed::{Completer, Completion, Prompter, Terminal};
 
 impl<'r, R> Commander<'r, R> {
+    /// Run the `Commander` interactively, with a completer constructed on every loop.
+    /// Consumes the instance, and blocks the thread until the loop is exited.
+    ///
+    /// See examples for how to construct a completer.
     pub fn run_with_completion<
         C: 'static + Completer<linefeed::DefaultTerminal>,
         F: Fn(&Self) -> C,
@@ -86,25 +94,44 @@ pub fn create_tree_completion_items<R>(cmdr: &Commander<R>) -> Vec<String> {
         .collect()
 }
 
-pub fn tree_completions<'a, I>(line: &str, items: I) -> Option<Vec<Completion>>
+/// Determines from a set of items the ones that could be
+/// completed from the given line.
+///
+/// Effectively loops through each item and checks if it
+/// starts with `line`.
+/// `items` should be constructed by [`create_tree_completion_items`].
+///
+/// The returned items are only the slice from the final _word_ in `line`,
+/// such that `hello wo` would return `world`, and `he` would return `hello world`.
+///
+/// # Examples
+/// ```rust
+/// # use cmdtree::completion::tree_completions;
+///
+/// let v = vec!["one", "one two", "only"];
+///
+/// let completions = tree_completions("o", v.iter());
+/// assert_eq!(completions.collect::<Vec<_>>(), vec!["one", "one two", "only"]);
+///
+/// let completions = tree_completions("one", v.iter());
+/// assert_eq!(completions.collect::<Vec<_>>(), vec!["one", "one two"]);
+/// ```
+///
+/// [`create_tree_completion_items`]: completion::create_tree_completion_items
+pub fn tree_completions<'a, I, T>(line: &'a str, items: I) -> impl Iterator<Item = &'a str>
 where
-    I: Iterator<Item = &'a String>,
+    I: Iterator<Item = &'a T>,
+    T: 'a + AsRef<str>,
 {
-    let v: Vec<_> = items
-        .filter(|x| x.starts_with(line))
-        .map(|x| {
-            // src code makes word_idx = x.len(), then counts backwards.
+    items
+        .map(|x| x.as_ref())
+        .filter(move |x| x.starts_with(line))
+        .map(move |x| {
+            // src code makes word_idx = line.len(), then counts backwards.
             // will not panic on out of bounds.
-            let word_idx = linefeed::complete::word_break_start(x, " ");
-            Completion::simple(x[word_idx..].to_string())
+            let word_idx = linefeed::complete::word_break_start(line, " ");
+            &x[word_idx..]
         })
-        .collect();
-
-    if v.len() > 0 {
-        Some(v)
-    } else {
-        None
-    }
 }
 
 #[cfg(test)]
@@ -144,62 +171,59 @@ mod tests {
         assert_eq!(v, vec_str(vec!["inner-class1", "inner-class1 name",]));
     }
 
+    #[test]
+    fn tree_completions_test() {
+        let mut cmder = Builder::default_config("cmdtree-example")
+            .begin_class("class1", "")
+            .begin_class("inner-class1", "")
+            .add_action("name", "", |_, _| ())
+            .end_class()
+            .end_class()
+            .begin_class("print", "")
+            .add_action("echo", "", |_, _| ())
+            .add_action("countdown", "", |_, _| ())
+            .end_class()
+            .add_action("clone", "", |_, _| ())
+            .into_commander()
+            .unwrap();
+
+        let v = create_tree_completion_items(&cmder);
+        let completions = tree_completions("", v.iter()).collect::<Vec<_>>();
+        assert_eq!(
+            completions,
+            vec![
+                "clone",
+                "class1",
+                "class1 inner-class1",
+                "class1 inner-class1 name",
+                "print",
+                "print countdown",
+                "print echo",
+            ]
+        );
+
+        let completions = tree_completions("cl", v.iter()).collect::<Vec<_>>();
+        assert_eq!(
+            completions,
+            vec![
+                "clone",
+                "class1",
+                "class1 inner-class1",
+                "class1 inner-class1 name",
+            ]
+        );
+
+        let completions = tree_completions("class1 ", v.iter()).collect::<Vec<_>>();
+        assert_eq!(completions, vec!["inner-class1", "inner-class1 name",]);
+
+        cmder.parse_line("class1", true, &mut std::io::sink());
+
+        let v = create_tree_completion_items(&cmder);
+        let completions = tree_completions("inn", v.iter()).collect::<Vec<_>>();
+        assert_eq!(completions, vec!["inner-class1", "inner-class1 name",]);
+    }
+
     fn vec_str(v: Vec<&str>) -> Vec<String> {
         v.into_iter().map(|x| x.to_string()).collect()
     }
 }
-
-// pub struct TreeCompleter {
-//     space_separated_elements: Vec<String>,
-// }
-
-// impl<'r, R> Commander<'r, R> {
-// 	pub fn build_tree_completer(&self) -> TreeCompleter {
-//         let cpath = self.path();
-
-//         let prefix = if self.at_root() { "." } else { "" };
-
-//         let space_separated_elements = self
-//             .structure()
-//             .into_iter()
-//             .map(|x| {
-//                 x[cpath.len()..].split('.').filter(|x| !x.is_empty()).fold(
-//                     String::from(prefix),
-//                     |mut s, x| {
-//                         if s.len() != prefix.len() {
-//                             s.push(' ');
-//                         }
-//                         s.push_str(x);
-//                         s
-//                     },
-//                 )
-//             })
-//             .collect();
-
-//         TreeCompleter {
-//             space_separated_elements,
-//         }
-//     }
-// }
-
-// impl<T: Terminal> Completer<T> for TreeCompleter {
-//     fn complete(
-//         &self,
-//         word: &str,
-//         prompter: &Prompter<T>,
-//         start: usize,
-//         end: usize,
-//     ) -> Option<Vec<Completion>> {
-//         let line = &prompter.buffer();
-
-//         // start is the index in the line
-//         // need to return just the _word_ portion
-//         Some(
-//             self.space_separated_elements
-//                 .iter()
-//                 .filter(|x| x.starts_with(line))
-//                 .map(|x| Completion::simple(x[start..].to_string()))
-//                 .collect(),
-//         )
-//     }
-// }
