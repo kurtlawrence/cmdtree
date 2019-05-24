@@ -2,7 +2,7 @@
 //!
 //! Completion is done functionally, see examples on github for how to implement.
 
-pub use super::*;
+use super::*;
 use colored::*;
 pub use linefeed::{Completer, Completion, Prompter, Terminal};
 
@@ -43,6 +43,19 @@ impl<'r, R> Commander<'r, R> {
             }
         }
     }
+}
+
+/// Match string and qualified name of action.
+#[derive(Debug, PartialEq)]
+pub struct ActionMatch {
+	/// The match str, space delimited from current path.
+	/// eg `a nested action`.
+    pub match_str: String,
+	/// Qualified action name from root, as produced from [`structure`].
+	/// eg `a.nested..action`
+	/// 
+	/// [`structure`]: Commander::structure
+    pub qualified_path: String,
 }
 
 /// Constructs a set of space delimited items that could be completed at the
@@ -91,6 +104,65 @@ pub fn create_tree_completion_items<R>(cmdr: &Commander<R>) -> Vec<String> {
                 })
         })
         .filter(|x| !x.is_empty())
+        .collect()
+}
+
+/// Constructs a set of space delimited actions that could be completed at the
+/// current path.
+///
+/// # Examples
+/// ```rust
+/// # use cmdtree::*;
+/// # use cmdtree::completion::create_action_completion_items;
+/// # use cmdtree::completion::ActionMatch;
+///
+/// let mut cmder = Builder::default_config("eg")
+/// 	.begin_class("one", "") // a class
+/// 		.begin_class("two", "")
+/// 		.add_action("three", "", |_, _| ())
+/// 		.end_class()
+/// 	.end_class()
+/// 	.begin_class("hello", "").end_class()
+/// 	.into_commander().unwrap();
+///
+/// let v = create_action_completion_items(&cmder);
+/// assert_eq!(v, vec![ ActionMatch {
+/// 		match_str: "one two three".to_string(),
+/// 		qualified_path: "one.two..three".to_string(),
+/// 	}]);
+///
+/// cmder.parse_line("one", true, &mut std::io::sink());
+///
+/// let v = create_action_completion_items(&cmder);
+/// assert_eq!(v, vec![ ActionMatch {
+/// 		match_str: "two three".to_string(),
+/// 		qualified_path: "one.two..three".to_string(),
+/// 	}]);
+/// ```
+pub fn create_action_completion_items<R>(cmdr: &Commander<R>) -> Vec<ActionMatch> {
+    let cpath = cmdr.path();
+
+    cmdr.structure()
+        .into_iter()
+        .filter(|x| x.contains("..") && x.starts_with(cpath))
+        .map(|x| {
+            let match_str = x[cpath.len()..]
+                .split('.')
+                .filter(|x| !x.is_empty())
+                .fold(String::new(), |mut s, x| {
+                    if s.len() != 0 {
+                        s.push(' ');
+                    }
+                    s.push_str(x);
+                    s
+                });
+			
+			ActionMatch {
+				match_str,
+				qualified_path: x[cmdr.root_name().len() + 1..].to_string(),
+			}
+        })
+        .filter(|x| !x.match_str.is_empty())
         .collect()
 }
 
