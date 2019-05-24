@@ -1,24 +1,24 @@
 //! [![Build Status](https://travis-ci.com/kurtlawrence/cmdtree.svg?branch=master)](https://travis-ci.com/kurtlawrence/cmdtree)
-//! [![Latest Version](https://img.shields.io/crates/v/cmdtree.svg)](https://crates.io/crates/cmdtree) 
-//! [![Rust Documentation](https://img.shields.io/badge/api-rustdoc-blue.svg)](https://docs.rs/cmdtree) 
+//! [![Latest Version](https://img.shields.io/crates/v/cmdtree.svg)](https://crates.io/crates/cmdtree)
+//! [![Rust Documentation](https://img.shields.io/badge/api-rustdoc-blue.svg)](https://docs.rs/cmdtree)
 //! [![codecov](https://codecov.io/gh/kurtlawrence/cmdtree/branch/master/graph/badge.svg)](https://codecov.io/gh/kurtlawrence/cmdtree)
-//! 
+//!
 //! (Rust) commands tree.
-//! 
+//!
 //! See the [rs docs](https://docs.rs/cmdtree/).
 //! Look at progress and contribute on [github.](https://github.com/kurtlawrence/cmdtree)
-//! 
+//!
 //! # cmdtree
-//! 
+//!
 //! Create a tree-like data structure of commands and actions to add an intuitive and interactive experience to an application.
 //! cmdtree uses a builder pattern to make constructing the tree ergonomic.
-//! 
+//!
 //! # Example
-//! 
+//!
 //! ```rust,no_run
 //! extern crate cmdtree;
 //! use cmdtree::*;
-//! 
+//!
 //! fn main() {
 //!   let cmder = Builder::default_config("cmdtree-example")
 //!     .begin_class("class1", "class1 help message") // a class
@@ -48,13 +48,13 @@
 //!     })
 //!     .into_commander() // can short-circuit the closing out of classes
 //!     .unwrap();
-//! 
+//!
 //!   cmder.run(); // run interactively
 //! }
 //! ```
-//! 
+//!
 //! Now run and in your shell:
-//! 
+//!
 //! ```sh
 //! cmdtree-example=> help            <-- Will print help messages
 //! help -- prints the help messages
@@ -99,6 +99,7 @@ use std::fmt;
 use std::sync::{Arc, Mutex};
 
 pub mod builder;
+pub mod completion;
 mod parse;
 
 pub use self::parse::LineResult;
@@ -118,7 +119,7 @@ pub struct Commander<'r, R> {
 }
 
 impl<'r, R> Commander<'r, R> {
-	/// Return the root name.
+    /// Return the root name.
     ///
     /// # Example
     /// ```rust
@@ -130,9 +131,9 @@ impl<'r, R> Commander<'r, R> {
     ///
     ///	assert_eq!(cmder.root_name(), "base");
     /// ```
-	pub fn root_name(&self) -> &str {
-		&self.root.name
-	}
+    pub fn root_name(&self) -> &str {
+        &self.root.name
+    }
 
     /// Return the path of the current class, separated by `.`.
     ///
@@ -176,25 +177,7 @@ impl<'r, R> Commander<'r, R> {
     ///
     /// This is the most simple way of using a `Commander`.
     pub fn run(mut self) {
-        let interface = Interface::new("commander").expect("failed to start interface");
-        let mut exit = false;
-
-        while !exit {
-            interface
-                .set_prompt(&format!("{}=> ", self.path().bright_cyan()))
-                .expect("failed to set prompt");
-
-            match interface.read_line() {
-                Ok(ReadResult::Input(s)) => {
-                    match self.parse_line(&s, true, &mut std::io::stdout()) {
-                        LineResult::Exit => exit = true,
-                        _ => (),
-                    }
-                    interface.add_history_unique(s);
-                }
-                _ => (),
-            }
-        }
+        self.run_with_completion(|_| linefeed::complete::DummyCompleter)
     }
 
     /// Returns the command structure as a sorted set.
@@ -217,12 +200,12 @@ impl<'r, R> Commander<'r, R> {
     ///
     /// assert_eq!(structure.iter().map(|x| x.as_str()).collect::<Vec<_>>(), vec![
     /// 	"base",
-	/// 	"base..action",
+    /// 	"base..action",
     /// 	"base.one",
     /// 	"base.one..action",
     /// 	"base.one.two",
     /// ]);
-	/// ```
+    /// ```
     pub fn structure(&self) -> BTreeSet<String> {
         let mut set = BTreeSet::new();
 
