@@ -16,7 +16,9 @@ fn main() {
         .into_commander()
         .unwrap();
 
-    cmder.run(); // run interactively
+    cmder.run_with_completion(|c| TreeCompleter {
+        items: c.build_tree_completion_items(),
+    });
 }
 
 struct TreeCompleter {

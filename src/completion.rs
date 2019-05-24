@@ -1,4 +1,5 @@
 pub use super::*;
+use colored::*;
 pub use linefeed::{Completer, Completion, Prompter, Terminal};
 
 impl<'r, R> Commander<'r, R> {

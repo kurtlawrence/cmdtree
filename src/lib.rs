@@ -92,7 +92,6 @@
 
 #![warn(missing_docs)]
 
-use colored::*;
 use linefeed::{Interface, ReadResult};
 use std::collections::BTreeSet;
 use std::fmt;
@@ -176,7 +175,7 @@ impl<'r, R> Commander<'r, R> {
     /// Reads from `stdin` using [`linefeed::Interface`](https://docs.rs/linefeed/0.5.4/linefeed/interface/struct.Interface.html).
     ///
     /// This is the most simple way of using a `Commander`.
-    pub fn run(mut self) {
+    pub fn run(self) {
         self.run_with_completion(|_| linefeed::complete::DummyCompleter)
     }
 
