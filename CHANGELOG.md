@@ -1,5 +1,10 @@
 # Change Log
 
+## 0.7.0
+
+- Changed acion function trait signature from `Box<Write>` to `&mut Write`
+- Added in completion :celebrate:. Look at documentation and examples for use.
+
 ## 0.6.0
 
 - Added a `structure()` function on `Commander`

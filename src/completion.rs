@@ -49,7 +49,8 @@ impl<'r, R> Commander<'r, R> {
 #[derive(Debug, PartialEq)]
 pub struct ActionMatch {
     /// The match str, space delimited from current path.
-    /// eg `a nested action`.
+	/// > Notice the extra space at the end. This is intentional.
+    /// eg `a nested action `.
     pub match_str: String,
     /// Qualified action name from root, as produced from [`structure`].
     /// eg `a.nested..action`
@@ -127,7 +128,7 @@ pub fn create_tree_completion_items<R>(cmdr: &Commander<R>) -> Vec<String> {
 ///
 /// let v = create_action_completion_items(&cmder);
 /// assert_eq!(v, vec![ ActionMatch {
-/// 		match_str: "one two three".to_string(),
+/// 		match_str: "one two three ".to_string(),
 /// 		qualified_path: "one.two..three".to_string(),
 /// 	}]);
 ///
@@ -135,7 +136,7 @@ pub fn create_tree_completion_items<R>(cmdr: &Commander<R>) -> Vec<String> {
 ///
 /// let v = create_action_completion_items(&cmder);
 /// assert_eq!(v, vec![ ActionMatch {
-/// 		match_str: "two three".to_string(),
+/// 		match_str: "two three ".to_string(),
 /// 		qualified_path: "one.two..three".to_string(),
 /// 	}]);
 /// ```
@@ -149,10 +150,8 @@ pub fn create_action_completion_items<R>(cmdr: &Commander<R>) -> Vec<ActionMatch
             let match_str = x[cpath.len()..].split('.').filter(|x| !x.is_empty()).fold(
                 String::new(),
                 |mut s, x| {
-                    if s.len() != 0 {
-                        s.push(' ');
-                    }
                     s.push_str(x);
+					s.push(' ');
                     s
                 },
             );
