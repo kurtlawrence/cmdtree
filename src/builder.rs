@@ -36,7 +36,7 @@ pub trait BuilderChain<'a, R> {
     /// If no parent exists (this function is called on the root), a `BuildError` will be returned.
     fn end_class(self) -> BuilderResult<'a, R>;
     /// Add an action. The closure type gives the arguments after the action command as an array of strings.
-    fn add_action<F: for<'w> FnMut(Box<Write + 'w>, &[&str]) -> R + Send + 'a>(
+    fn add_action<F: FnMut(&mut Write, &[&str]) -> R + Send + 'a>(
         self,
         name: &str,
         help_msg: &'a str,
@@ -103,7 +103,7 @@ impl<'a, R> BuilderChain<'a, R> for Builder<'a, R> {
 
     fn add_action<F>(mut self, name: &str, help_msg: &'a str, closure: F) -> BuilderResult<'a, R>
     where
-        F: for<'w> FnMut(Box<Write + 'w>, &[&str]) -> R + Send + 'a,
+        F: FnMut(&mut Write, &[&str]) -> R + Send + 'a,
     {
         check_names(name, &self.current).map(|_| {
             self.current.actions.push(Action {
@@ -139,7 +139,7 @@ impl<'a, R> BuilderChain<'a, R> for BuilderResult<'a, R> {
         self?.root()
     }
 
-    fn add_action<F: for<'w> FnMut(Box<Write + 'w>, &[&str]) -> R + Send + 'a>(
+    fn add_action<F: FnMut(&mut Write, &[&str]) -> R + Send + 'a>(
         self,
         name: &str,
         help_msg: &'a str,

@@ -1,6 +1,7 @@
 //! Example on implementing a completer.
 
 use cmdtree::completion::*;
+use cmdtree::{Builder, BuilderChain};
 
 fn main() {
     let cmder = Builder::default_config("cmdtree-example")

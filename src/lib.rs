@@ -258,13 +258,13 @@ impl<'a, R> PartialEq for SubClass<'a, R> {
 struct Action<'a, R> {
     name: String,
     help: &'a str,
-    closure: Mutex<Box<for<'w> FnMut(Box<Write + 'w>, &[&str]) -> R + Send + 'a>>,
+    closure: Mutex<Box<FnMut(&mut Write, &[&str]) -> R + Send + 'a>>,
 }
 
 impl<'a, R> Action<'a, R> {
     fn call<W: Write>(&self, wtr: &mut W, arguments: &[&str]) -> R {
         let c = &mut *self.closure.lock().expect("locking command action failed");
-        c(Box::new(wtr), arguments)
+        c(wtr, arguments)
     }
 }
 

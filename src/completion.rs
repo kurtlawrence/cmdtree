@@ -48,13 +48,13 @@ impl<'r, R> Commander<'r, R> {
 /// Match string and qualified name of action.
 #[derive(Debug, PartialEq)]
 pub struct ActionMatch {
-	/// The match str, space delimited from current path.
-	/// eg `a nested action`.
+    /// The match str, space delimited from current path.
+    /// eg `a nested action`.
     pub match_str: String,
-	/// Qualified action name from root, as produced from [`structure`].
-	/// eg `a.nested..action`
-	/// 
-	/// [`structure`]: Commander::structure
+    /// Qualified action name from root, as produced from [`structure`].
+    /// eg `a.nested..action`
+    ///
+    /// [`structure`]: Commander::structure
     pub qualified_path: String,
 }
 
@@ -146,21 +146,21 @@ pub fn create_action_completion_items<R>(cmdr: &Commander<R>) -> Vec<ActionMatch
         .into_iter()
         .filter(|x| x.contains("..") && x.starts_with(cpath))
         .map(|x| {
-            let match_str = x[cpath.len()..]
-                .split('.')
-                .filter(|x| !x.is_empty())
-                .fold(String::new(), |mut s, x| {
+            let match_str = x[cpath.len()..].split('.').filter(|x| !x.is_empty()).fold(
+                String::new(),
+                |mut s, x| {
                     if s.len() != 0 {
                         s.push(' ');
                     }
                     s.push_str(x);
                     s
-                });
-			
-			ActionMatch {
-				match_str,
-				qualified_path: x[cmdr.root_name().len() + 1..].to_string(),
-			}
+                },
+            );
+
+            ActionMatch {
+                match_str,
+                qualified_path: x[cmdr.root_name().len() + 1..].to_string(),
+            }
         })
         .filter(|x| !x.match_str.is_empty())
         .collect()
