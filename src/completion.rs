@@ -61,6 +61,34 @@ pub struct ActionMatch {
     pub qualified_path: String,
 }
 
+#[derive(Debug, PartialEq)]
+pub struct MatchStr {
+    /// The line that would match from the root.
+    root_str: String,
+    /// The index of each space + 1, so the start of a inner match
+    starts: Vec<usize>,
+}
+
+impl MatchStr {
+    pub fn new(root_str: String) -> Self {
+        let starts = root_str
+            .char_indices()
+            .filter(|(_, ch)| ch == &' ')
+            .map(|(idx, _)| idx + 1)
+            .collect();
+
+        Self { root_str, starts }
+    }
+
+    pub fn at_lvl(&self, lvl: usize) -> Option<&str> {
+        if lvl == 0 {
+            Some(&self.root_str)
+        } else {
+            self.starts.get(lvl - 1).map(|&idx| &self.root_str[idx..])
+        }
+    }
+}
+
 /// Constructs a set of space delimited items that could be completed at the
 /// current path.
 ///
@@ -210,6 +238,22 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+
+	#[test]
+	fn match_str_test() {
+		let mstr = MatchStr::new("testing one two three".to_string());
+
+		assert_eq!(mstr, MatchStr {
+			root_str: String::from("testing one two three"),
+			starts: vec![8, 12, 16]
+		});
+
+		assert_eq!(mstr.at_lvl(0), Some("testing one two three"));
+		assert_eq!(mstr.at_lvl(1), Some("one two three"));
+		assert_eq!(mstr.at_lvl(2), Some("two three"));
+		assert_eq!(mstr.at_lvl(3), Some("three"));
+		assert_eq!(mstr.at_lvl(4), None);
+	}
 
     #[test]
     fn create_tree_completion_items_test() {
