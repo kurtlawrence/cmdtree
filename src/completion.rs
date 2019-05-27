@@ -49,9 +49,9 @@ impl<'r, R> Commander<'r, R> {
 #[derive(Debug, PartialEq)]
 pub struct ActionMatch {
     /// The match str, space delimited from current path.
-	/// 
+    ///
     /// > Notice the extra space at the end. This is intentional.
-	/// 
+    ///
     /// eg `"a nested action "`.
     pub match_str: String,
     /// Qualified action name from root, as produced from [`structure`].

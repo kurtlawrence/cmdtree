@@ -17,3 +17,10 @@ travis-ci = { repository = "kurtlawrence/cmdtree" }
 [dependencies]
 colored = "1.8"
 linefeed = "0.6"
+
+[dev-dependencies]
+criterion = "0.2"
+
+[[bench]]
+name = "benches"
+harness = false
