@@ -61,34 +61,6 @@ pub struct ActionMatch {
     pub qualified_path: String,
 }
 
-#[derive(Debug, PartialEq)]
-pub struct MatchStr {
-    /// The line that would match from the root.
-    root_str: String,
-    /// The index of each space + 1, so the start of a inner match
-    starts: Vec<usize>,
-}
-
-impl MatchStr {
-    pub fn new(root_str: String) -> Self {
-        let starts = root_str
-            .char_indices()
-            .filter(|(_, ch)| ch == &' ')
-            .map(|(idx, _)| idx + 1)
-            .collect();
-
-        Self { root_str, starts }
-    }
-
-    pub fn at_lvl(&self, lvl: usize) -> Option<&str> {
-        if lvl == 0 {
-            Some(&self.root_str)
-        } else {
-            self.starts.get(lvl - 1).map(|&idx| &self.root_str[idx..])
-        }
-    }
-}
-
 /// Constructs a set of space delimited items that could be completed at the
 /// current path.
 ///
@@ -117,14 +89,10 @@ impl MatchStr {
 /// 	.into_iter().map(|x| x.to_string()).collect::<Vec<_>>());
 /// ```
 pub fn create_tree_completion_items<R>(cmdr: &Commander<R>) -> Vec<String> {
-    let cpath = cmdr.path();
-
-    cmdr.structure()
+    cmdr.structure(false)
         .into_iter()
-        .filter(|x| x.starts_with(cpath))
         .map(|x| {
-            x[cpath.len()..]
-                .split('.')
+            x.split('.')
                 .filter(|x| !x.is_empty())
                 .fold(String::new(), |mut s, x| {
                     if s.len() != 0 {
@@ -172,23 +140,30 @@ pub fn create_tree_completion_items<R>(cmdr: &Commander<R>) -> Vec<String> {
 /// ```
 pub fn create_action_completion_items<R>(cmdr: &Commander<R>) -> Vec<ActionMatch> {
     let cpath = cmdr.path();
+    let rname = cmdr.root_name();
 
-    cmdr.structure()
+    let starter = if cpath == rname {
+        "" // no starting prefix
+    } else {
+        &cpath[rname.len() + 1..] // remove the 'root_name.' portion
+    };
+
+    cmdr.structure(true)
         .into_iter()
-        .filter(|x| x.contains("..") && x.starts_with(cpath))
+        .filter(|x| x.contains("..") && x.starts_with(starter))
         .map(|x| {
-            let match_str = x[cpath.len()..].split('.').filter(|x| !x.is_empty()).fold(
-                String::new(),
-                |mut s, x| {
+            let match_str = x[starter.len()..]
+                .split('.')
+                .filter(|x| !x.is_empty())
+                .fold(String::new(), |mut s, x| {
                     s.push_str(x);
                     s.push(' ');
                     s
-                },
-            );
+                });
 
             ActionMatch {
                 match_str,
-                qualified_path: x[cmdr.root_name().len() + 1..].to_string(),
+                qualified_path: x,
             }
         })
         .filter(|x| !x.match_str.is_empty())
@@ -240,25 +215,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn match_str_test() {
-        let mstr = MatchStr::new("testing one two three".to_string());
-
-        assert_eq!(
-            mstr,
-            MatchStr {
-                root_str: String::from("testing one two three"),
-                starts: vec![8, 12, 16]
-            }
-        );
-
-        assert_eq!(mstr.at_lvl(0), Some("testing one two three"));
-        assert_eq!(mstr.at_lvl(1), Some("one two three"));
-        assert_eq!(mstr.at_lvl(2), Some("two three"));
-        assert_eq!(mstr.at_lvl(3), Some("three"));
-        assert_eq!(mstr.at_lvl(4), None);
-    }
-
-    #[test]
     fn create_tree_completion_items_test() {
         let mut cmder = Builder::default_config("cmdtree-example")
             .begin_class("class1", "") // a class
@@ -289,6 +245,40 @@ mod tests {
 
         let v = create_tree_completion_items(&cmder);
         assert_eq!(v, vec_str(vec!["inner-class1", "inner-class1 name",]));
+    }
+
+    #[test]
+    fn create_action_completion_items_test() {
+        let mut cmder = Builder::default_config("eg")
+            .begin_class("one", "") // a class
+            .begin_class("two", "")
+            .add_action("three", "", |_, _| ())
+            .end_class()
+            .end_class()
+            .begin_class("hello", "")
+            .end_class()
+            .into_commander()
+            .unwrap();
+
+        let v = create_action_completion_items(&cmder);
+        assert_eq!(
+            v,
+            vec![ActionMatch {
+                match_str: "one two three ".to_string(),
+                qualified_path: "one.two..three".to_string(),
+            }]
+        );
+
+        cmder.parse_line("one", true, &mut std::io::sink());
+
+        let v = create_action_completion_items(&cmder);
+        assert_eq!(
+            v,
+            vec![ActionMatch {
+                match_str: "two three ".to_string(),
+                qualified_path: "one.two..three".to_string(),
+            }]
+        );
     }
 
     #[test]

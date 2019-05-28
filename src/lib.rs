@@ -180,6 +180,8 @@ impl<'r, R> Commander<'r, R> {
 
     /// Returns the command structure as a sorted set.
     ///
+    /// Can return from the the current class or the root.
+    ///
     /// Each item is a dot separated path, except for actions which are separated by a double dot.
     ///
     /// # Examples
@@ -194,20 +196,27 @@ impl<'r, R> Commander<'r, R> {
     /// 	.add_action("action", "", |_,_| ())
     ///		.into_commander().unwrap();
     ///
-    /// let structure = cmder.structure();
+    /// let structure = cmder.structure(true);
     ///
     /// assert_eq!(structure.iter().map(|x| x.as_str()).collect::<Vec<_>>(), vec![
-    /// 	"base",
-    /// 	"base..action",
-    /// 	"base.one",
-    /// 	"base.one..action",
-    /// 	"base.one.two",
+    /// 	"..action",
+    /// 	"one",
+    /// 	"one..action",
+    /// 	"one.two",
     /// ]);
     /// ```
-    pub fn structure(&self) -> BTreeSet<String> {
+    pub fn structure(&self, from_root: bool) -> BTreeSet<String> {
         let mut set = BTreeSet::new();
 
-        let mut stack = vec![(self.root.name.clone(), &self.root)];
+        let mut stack: Vec<(String, _)> = {
+            let r = if from_root { &self.root } else { &self.current };
+
+            for action in r.actions.iter() {
+                set.insert(format!("..{}", action.name));
+            }
+
+            r.classes.iter().map(|x| (x.name.clone(), x)).collect()
+        };
 
         while let Some(item) = stack.pop() {
             let (parent_path, parent) = item;
@@ -352,5 +361,34 @@ mod tests {
 
         cmder.parse_line("c", true, w);
         assert_eq!(cmder.at_root(), true);
+    }
+
+    #[test]
+    fn structure_test() {
+        let mut cmder = Builder::default_config("base")
+            .begin_class("one", "")
+            .begin_class("two", "")
+            .end_class()
+            .add_action("action", "", |_, _| ())
+            .end_class()
+            .add_action("action", "", |_, _| ())
+            .into_commander()
+            .unwrap();
+
+        cmder.parse_line("one", false, &mut std::io::sink());
+
+        let structure = cmder.structure(true);
+
+        assert_eq!(
+            structure.iter().map(|x| x.as_str()).collect::<Vec<_>>(),
+            vec!["..action", "one", "one..action", "one.two",]
+        );
+
+        let structure = cmder.structure(false);
+
+        assert_eq!(
+            structure.iter().map(|x| x.as_str()).collect::<Vec<_>>(),
+            vec!["..action", "two",]
+        );
     }
 }
