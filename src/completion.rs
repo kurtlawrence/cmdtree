@@ -239,21 +239,24 @@ where
 mod tests {
     use super::*;
 
-	#[test]
-	fn match_str_test() {
-		let mstr = MatchStr::new("testing one two three".to_string());
+    #[test]
+    fn match_str_test() {
+        let mstr = MatchStr::new("testing one two three".to_string());
 
-		assert_eq!(mstr, MatchStr {
-			root_str: String::from("testing one two three"),
-			starts: vec![8, 12, 16]
-		});
+        assert_eq!(
+            mstr,
+            MatchStr {
+                root_str: String::from("testing one two three"),
+                starts: vec![8, 12, 16]
+            }
+        );
 
-		assert_eq!(mstr.at_lvl(0), Some("testing one two three"));
-		assert_eq!(mstr.at_lvl(1), Some("one two three"));
-		assert_eq!(mstr.at_lvl(2), Some("two three"));
-		assert_eq!(mstr.at_lvl(3), Some("three"));
-		assert_eq!(mstr.at_lvl(4), None);
-	}
+        assert_eq!(mstr.at_lvl(0), Some("testing one two three"));
+        assert_eq!(mstr.at_lvl(1), Some("one two three"));
+        assert_eq!(mstr.at_lvl(2), Some("two three"));
+        assert_eq!(mstr.at_lvl(3), Some("three"));
+        assert_eq!(mstr.at_lvl(4), None);
+    }
 
     #[test]
     fn create_tree_completion_items_test() {

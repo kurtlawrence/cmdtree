@@ -55,7 +55,24 @@ fn build_completion(c: &mut Criterion) {
     let items = create_tree_completion_items(&cmdr);
 
     c.bench_function("tree_completions", move |b| {
-        b.iter(|| tree_completions("", items.iter()))
+        b.iter(|| tree_completions("", items.iter()).count())
+    });
+}
+
+fn completion_cycle(c: &mut Criterion) {
+    let mut cmdr = build_cmdr();
+
+    c.bench_function("completion_cycle", move |b| {
+        b.iter(|| {
+            let items = create_tree_completion_items(&cmdr);
+            let completions = tree_completions("one", items.iter()).count();
+            assert_eq!(completions, 4);
+            cmdr.parse_line("more_stuff insider", false, &mut std::io::sink());
+            let items = create_tree_completion_items(&cmdr);
+            let completions = tree_completions("one", items.iter()).count();
+            assert_eq!(completions, 10);
+            cmdr.parse_line("c", false, &mut std::io::sink());
+        })
     });
 }
 
@@ -86,5 +103,5 @@ fn build_cmdr<'a>() -> Commander<'a, ()> {
     cmdr
 }
 
-criterion_group!(benches, parse_line, build_completion);
+criterion_group!(benches, parse_line, build_completion, completion_cycle);
 criterion_main!(benches);
