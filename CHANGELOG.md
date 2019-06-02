@@ -1,5 +1,9 @@
 # Change Log
 
+## 0.8.0
+
+- Feature gated the `runnable` sections, (`run`, `run_with_completion`). Set as default.
+
 ## 0.7.0
 
 - Changed acion function trait signature from `Box<Write>` to `&mut Write`

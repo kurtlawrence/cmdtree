@@ -1,24 +1,24 @@
 //! [![Build Status](https://travis-ci.com/kurtlawrence/cmdtree.svg?branch=master)](https://travis-ci.com/kurtlawrence/cmdtree)
-//! [![Latest Version](https://img.shields.io/crates/v/cmdtree.svg)](https://crates.io/crates/cmdtree) 
-//! [![Rust Documentation](https://img.shields.io/badge/api-rustdoc-blue.svg)](https://docs.rs/cmdtree) 
+//! [![Latest Version](https://img.shields.io/crates/v/cmdtree.svg)](https://crates.io/crates/cmdtree)
+//! [![Rust Documentation](https://img.shields.io/badge/api-rustdoc-blue.svg)](https://docs.rs/cmdtree)
 //! [![codecov](https://codecov.io/gh/kurtlawrence/cmdtree/branch/master/graph/badge.svg)](https://codecov.io/gh/kurtlawrence/cmdtree)
-//! 
+//!
 //! (Rust) commands tree.
-//! 
+//!
 //! See the [rs docs](https://docs.rs/cmdtree/).
 //! Look at progress and contribute on [github.](https://github.com/kurtlawrence/cmdtree)
-//! 
+//!
 //! # cmdtree
-//! 
+//!
 //! Create a tree-like data structure of commands and actions to add an intuitive and interactive experience to an application.
 //! cmdtree uses a builder pattern to make constructing the tree ergonomic.
-//! 
+//!
 //! # Example
-//! 
+//!
 //! ```rust,no_run
 //! extern crate cmdtree;
 //! use cmdtree::*;
-//! 
+//!
 //! fn main() {
 //!   let cmder = Builder::default_config("cmdtree-example")
 //!     .begin_class("class1", "class1 help message") // a class
@@ -48,13 +48,13 @@
 //!     })
 //!     .into_commander() // can short-circuit the closing out of classes
 //!     .unwrap();
-//! 
+//!
 //!   cmder.run(); // run interactively
 //! }
 //! ```
-//! 
+//!
 //! Now run and in your shell:
-//! 
+//!
 //! ```sh
 //! cmdtree-example=> help            <-- Will print help messages
 //! help -- prints the help messages
@@ -92,7 +92,6 @@
 
 #![warn(missing_docs)]
 
-use linefeed::{Interface, ReadResult};
 use std::collections::BTreeSet;
 use std::fmt;
 use std::io::Write;
@@ -174,6 +173,7 @@ impl<'r, R> Commander<'r, R> {
     /// Consumes the instance, and blocks the thread until the loop is exited.
     ///
     /// This is the most simple way of using a `Commander`.
+    #[cfg(feature = "runnable")]
     pub fn run(self) {
         self.run_with_completion(|_| linefeed::complete::DummyCompleter)
     }

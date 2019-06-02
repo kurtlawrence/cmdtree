@@ -3,14 +3,17 @@
 //! Completion is done functionally, see examples on github for how to implement.
 
 use super::*;
+#[cfg(feature = "runnable")]
 use colored::*;
-pub use linefeed::{Completer, Completion, Prompter, Terminal};
+#[cfg(feature = "runnable")]
+pub use linefeed::{Completer, Completion, Interface, Prompter, ReadResult, Terminal};
 
 impl<'r, R> Commander<'r, R> {
     /// Run the `Commander` interactively, with a completer constructed on every loop.
     /// Consumes the instance, and blocks the thread until the loop is exited.
     ///
     /// See examples for how to construct a completer.
+    #[cfg(feature = "runnable")]
     pub fn run_with_completion<
         C: 'static + Completer<linefeed::DefaultTerminal>,
         F: Fn(&Self) -> C,
@@ -205,9 +208,23 @@ where
         .map(move |x| {
             // src code makes word_idx = line.len(), then counts backwards.
             // will not panic on out of bounds.
-            let word_idx = linefeed::complete::word_break_start(line, " ");
+            let word_idx = word_break_start(line, &[' ']);
             &x[word_idx..]
         })
+}
+
+/// Returns the start position of the _last_ word, delimited by any character.
+pub fn word_break_start(s: &str, word_break_ch: &[char]) -> usize {
+    let mut start = s.len();
+
+    for (idx, ch) in s.char_indices().rev() {
+        if word_break_ch.contains(&ch) {
+            break;
+        }
+        start = idx;
+    }
+
+    start
 }
 
 #[cfg(test)]
