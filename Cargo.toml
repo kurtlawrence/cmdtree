@@ -1,6 +1,6 @@
 [package]
 name = "cmdtree"
-version = "0.8.0"
+version = "0.9.0"
 authors = ["kurt <kurtlawrence92@gmail.com>"]
 description = "(Rust) commands tree"
 license = "MIT"

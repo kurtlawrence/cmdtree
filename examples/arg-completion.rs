@@ -24,11 +24,11 @@ fn main() {
     });
 }
 
-struct ArgCompleter {
-    items: Vec<ActionMatch>,
+struct ArgCompleter<'a> {
+    items: Vec<ActionMatch<'a>>,
 }
 
-impl<T: Terminal> Completer<T> for ArgCompleter {
+impl<'a, T: Terminal> Completer<T> for ArgCompleter<'a> {
     fn complete(
         &self,
         _word: &str,
@@ -45,13 +45,14 @@ impl<T: Terminal> Completer<T> for ArgCompleter {
         // retrieve the matched action is there is one.
         // also check that the action is one that should be completed on, using qualified path
         let action_match = self.items.iter().find(|x| {
-            line.starts_with(x.match_str.as_str()) && actions.contains(&x.qualified_path.as_str())
+            line.starts_with(x.info.completestr.as_str())
+                && actions.contains(&x.qualified_path.as_str())
         })?;
 
         // going to use this logic for compeletions, but can implement own
         let path_completer = linefeed::complete::PathCompleter;
 
-        let arg_line = &line[action_match.match_str.len()..]; // portion of line just for args
+        let arg_line = &line[action_match.info.completestr.len()..]; // portion of line just for args
         let word_start = linefeed::complete::word_break_start(arg_line, " "); // break on spaces
         let word = &arg_line[word_start..];
 

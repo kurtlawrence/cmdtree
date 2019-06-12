@@ -1,5 +1,9 @@
 # Change Log
 
+## 0.9.0
+
+- Structure and completion aspects now return specific data types with more information such as the item type and the help message.
+
 ## 0.8.0
 
 - Feature gated the `runnable` sections, (`run`, `run_with_completion`). Set as default.

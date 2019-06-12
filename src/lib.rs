@@ -1,24 +1,24 @@
 //! [![Build Status](https://travis-ci.com/kurtlawrence/cmdtree.svg?branch=master)](https://travis-ci.com/kurtlawrence/cmdtree)
-//! [![Latest Version](https://img.shields.io/crates/v/cmdtree.svg)](https://crates.io/crates/cmdtree)
-//! [![Rust Documentation](https://img.shields.io/badge/api-rustdoc-blue.svg)](https://docs.rs/cmdtree)
+//! [![Latest Version](https://img.shields.io/crates/v/cmdtree.svg)](https://crates.io/crates/cmdtree) 
+//! [![Rust Documentation](https://img.shields.io/badge/api-rustdoc-blue.svg)](https://docs.rs/cmdtree) 
 //! [![codecov](https://codecov.io/gh/kurtlawrence/cmdtree/branch/master/graph/badge.svg)](https://codecov.io/gh/kurtlawrence/cmdtree)
-//!
+//! 
 //! (Rust) commands tree.
-//!
+//! 
 //! See the [rs docs](https://docs.rs/cmdtree/).
 //! Look at progress and contribute on [github.](https://github.com/kurtlawrence/cmdtree)
-//!
+//! 
 //! # cmdtree
-//!
+//! 
 //! Create a tree-like data structure of commands and actions to add an intuitive and interactive experience to an application.
 //! cmdtree uses a builder pattern to make constructing the tree ergonomic.
-//!
+//! 
 //! # Example
-//!
+//! 
 //! ```rust,no_run
 //! extern crate cmdtree;
 //! use cmdtree::*;
-//!
+//! 
 //! fn main() {
 //!   let cmder = Builder::default_config("cmdtree-example")
 //!     .begin_class("class1", "class1 help message") // a class
@@ -48,13 +48,13 @@
 //!     })
 //!     .into_commander() // can short-circuit the closing out of classes
 //!     .unwrap();
-//!
+//! 
 //!   cmder.run(); // run interactively
 //! }
 //! ```
-//!
+//! 
 //! Now run and in your shell:
-//!
+//! 
 //! ```sh
 //! cmdtree-example=> help            <-- Will print help messages
 //! help -- prints the help messages
@@ -92,6 +92,7 @@
 
 #![warn(missing_docs)]
 
+use std::cmp::Ordering;
 use std::collections::BTreeSet;
 use std::fmt;
 use std::io::Write;
@@ -198,21 +199,25 @@ impl<'r, R> Commander<'r, R> {
     ///
     /// let structure = cmder.structure(true);
     ///
-    /// assert_eq!(structure.iter().map(|x| x.as_str()).collect::<Vec<_>>(), vec![
+    /// assert_eq!(structure.iter().map(|x| x.path.as_str()).collect::<Vec<_>>(), vec![
     /// 	"..action",
     /// 	"one",
     /// 	"one..action",
     /// 	"one.two",
     /// ]);
     /// ```
-    pub fn structure(&self, from_root: bool) -> BTreeSet<String> {
+    pub fn structure(&self, from_root: bool) -> BTreeSet<StructureInfo<'r>> {
         let mut set = BTreeSet::new();
 
         let mut stack: Vec<(String, _)> = {
             let r = if from_root { &self.root } else { &self.current };
 
             for action in r.actions.iter() {
-                set.insert(format!("..{}", action.name));
+                set.insert(StructureInfo {
+                    path: format!("..{}", action.name),
+                    itemtype: ItemType::Action,
+                    help_msg: action.help,
+                });
             }
 
             r.classes.iter().map(|x| (x.name.clone(), x)).collect()
@@ -222,14 +227,22 @@ impl<'r, R> Commander<'r, R> {
             let (parent_path, parent) = item;
 
             for action in parent.actions.iter() {
-                set.insert(format!("{}..{}", parent_path, action.name));
+                set.insert(StructureInfo {
+                    path: format!("{}..{}", parent_path, action.name),
+                    itemtype: ItemType::Action,
+                    help_msg: action.help,
+                });
             }
 
             for class in parent.classes.iter() {
                 stack.push((format!("{}.{}", parent_path, class.name), class));
             }
 
-            set.insert(parent_path);
+            set.insert(StructureInfo {
+                path: parent_path,
+                itemtype: ItemType::Class,
+                help_msg: parent.help,
+            });
         }
 
         set
@@ -267,7 +280,7 @@ impl<'a, R> PartialEq for SubClass<'a, R> {
 struct Action<'a, R> {
     name: String,
     help: &'a str,
-    closure: Mutex<Box<FnMut(&mut Write, &[&str]) -> R + Send + 'a>>,
+    closure: Mutex<Box<dyn FnMut(&mut dyn Write, &[&str]) -> R + Send + 'a>>,
 }
 
 impl<'a, R> Action<'a, R> {
@@ -300,6 +313,49 @@ impl<'a, R> fmt::Debug for Action<'a, R> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Action {{ name: {}, help: {} }}", self.name, self.help)
     }
+}
+
+/// An item in the command tree.
+pub struct StructureInfo<'a> {
+    /// Period delimited path. Actions are double delimted.
+    ///
+    /// Eg.
+    /// - A class: `a.nested.class`
+    /// - An action: `a.nested.class..action`
+    pub path: String,
+    /// Class or Action.
+    pub itemtype: ItemType,
+    /// The help message.
+    pub help_msg: &'a str,
+}
+
+impl<'a> PartialEq for StructureInfo<'a> {
+    fn eq(&self, other: &StructureInfo) -> bool {
+        self.path == other.path
+    }
+}
+
+impl<'a> Eq for StructureInfo<'a> {}
+
+impl<'a> PartialOrd for StructureInfo<'a> {
+    fn partial_cmp(&self, other: &StructureInfo) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl<'a> Ord for StructureInfo<'a> {
+    fn cmp(&self, other: &StructureInfo) -> Ordering {
+        self.path.cmp(&other.path)
+    }
+}
+
+/// A command type.
+#[derive(Debug, PartialEq)]
+pub enum ItemType {
+    /// Class type.
+    Class,
+    /// Action type.
+    Action,
 }
 
 #[cfg(test)]
@@ -380,14 +436,20 @@ mod tests {
         let structure = cmder.structure(true);
 
         assert_eq!(
-            structure.iter().map(|x| x.as_str()).collect::<Vec<_>>(),
+            structure
+                .iter()
+                .map(|x| x.path.as_str())
+                .collect::<Vec<_>>(),
             vec!["..action", "one", "one..action", "one.two",]
         );
 
         let structure = cmder.structure(false);
 
         assert_eq!(
-            structure.iter().map(|x| x.as_str()).collect::<Vec<_>>(),
+            structure
+                .iter()
+                .map(|x| x.path.as_str())
+                .collect::<Vec<_>>(),
             vec!["..action", "two",]
         );
     }

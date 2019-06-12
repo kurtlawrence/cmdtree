@@ -21,11 +21,11 @@ fn main() {
     });
 }
 
-struct TreeCompleter {
-    items: Vec<String>,
+struct TreeCompleter<'a> {
+    items: Vec<CompletionInfo<'a>>,
 }
 
-impl<T: Terminal> Completer<T> for TreeCompleter {
+impl<'a, T: Terminal> Completer<T> for TreeCompleter<'a> {
     fn complete(
         &self,
         _word: &str,
@@ -35,7 +35,7 @@ impl<T: Terminal> Completer<T> for TreeCompleter {
     ) -> Option<Vec<Completion>> {
         Some(
             tree_completions(prompter.buffer(), self.items.iter())
-                .map(|x| Completion::simple(x.to_string()))
+                .map(|x| Completion::simple(x.0.to_string()))
                 .collect(),
         )
     }
