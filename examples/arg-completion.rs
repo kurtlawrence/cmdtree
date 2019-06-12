@@ -24,11 +24,11 @@ fn main() {
     });
 }
 
-struct ArgCompleter<'a> {
-    items: Vec<ActionMatch<'a>>,
+struct ArgCompleter {
+    items: Vec<ActionMatch>,
 }
 
-impl<'a, T: Terminal> Completer<T> for ArgCompleter<'a> {
+impl<T: Terminal> Completer<T> for ArgCompleter {
     fn complete(
         &self,
         _word: &str,

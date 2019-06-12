@@ -8,7 +8,7 @@ use colored::*;
 #[cfg(feature = "runnable")]
 pub use linefeed::{Completer, Completion, Interface, Prompter, ReadResult, Terminal};
 
-impl<'r, R> Commander<'r, R> {
+impl<'r, R> Commander<R> {
     /// Run the `Commander` interactively, with a completer constructed on every loop.
     /// Consumes the instance, and blocks the thread until the loop is exited.
     ///
@@ -48,13 +48,13 @@ impl<'r, R> Commander<'r, R> {
 
 /// Match string and qualified name of action.
 #[derive(Debug, PartialEq)]
-pub struct ActionMatch<'a> {
+pub struct ActionMatch {
     /// The match str, space delimited from current path.
     ///
     /// > Notice the extra space at the end. This is intentional.
     ///
     /// eg `"a nested action "`.
-    pub info: CompletionInfo<'a>,
+    pub info: CompletionInfo,
     /// Qualified action name from root, as produced from [`structure`].
     /// eg `a.nested..action`
     ///
@@ -64,13 +64,13 @@ pub struct ActionMatch<'a> {
 
 /// Completion item.
 #[derive(Debug, PartialEq)]
-pub struct CompletionInfo<'a> {
+pub struct CompletionInfo {
     /// The string to match. Similar to path but space delimited.
     pub completestr: String,
     /// Class or action.
     pub itemtype: ItemType,
     /// The help message.
-    pub help_msg: &'a str,
+    pub help_msg: CmdStr,
 }
 
 /// Constructs a set of space delimited items that could be completed at the
@@ -100,7 +100,7 @@ pub struct CompletionInfo<'a> {
 /// assert_eq!(v, vec!["two", "two three"]
 /// 	.into_iter().map(|x| x.to_string()).collect::<Vec<_>>());
 /// ```
-pub fn create_tree_completion_items<'a, R>(cmdr: &Commander<'a, R>) -> Vec<CompletionInfo<'a>> {
+pub fn create_tree_completion_items<'a, R>(cmdr: &Commander<R>) -> Vec<CompletionInfo> {
     cmdr.structure(false)
         .into_iter()
         .filter_map(|info| {
@@ -138,7 +138,7 @@ pub fn create_tree_completion_items<'a, R>(cmdr: &Commander<'a, R>) -> Vec<Compl
 
 /// Constructs a set of space delimited actions that could be completed at the
 /// current path.
-pub fn create_action_completion_items<'a, R>(cmdr: &Commander<'a, R>) -> Vec<ActionMatch<'a>> {
+pub fn create_action_completion_items<'a, R>(cmdr: &Commander<R>) -> Vec<ActionMatch> {
     let cpath = cmdr.path();
     let rname = cmdr.root_name();
 
@@ -201,9 +201,9 @@ pub fn create_action_completion_items<'a, R>(cmdr: &Commander<'a, R>) -> Vec<Act
 pub fn tree_completions<'l: 'i, 'i, 'a: 'i, I>(
     line: &'l str,
     items: I,
-) -> impl Iterator<Item = (&'i str, &'i CompletionInfo<'a>)>
+) -> impl Iterator<Item = (&'i str, &'i CompletionInfo)>
 where
-    I: Iterator<Item = &'i CompletionInfo<'a>>,
+    I: Iterator<Item = &'i CompletionInfo>,
 {
     items
         .filter(move |x| x.completestr.starts_with(line))

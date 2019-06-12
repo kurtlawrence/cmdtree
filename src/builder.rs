@@ -1,14 +1,14 @@
 //! Builder Pattern
-//! 
+//!
 //! To construct a `Commander` a `Builder` is used. It allows chaining together the common actions, whilst also construct the structure of the tree in an ergonomic manner.
 //! The builder pattern is supported by the [`BuilderChain`](./trait.BuilderChain.html) trait, which is implemented on the `Builder` struct, and also the common result type `BuilderResult`.
 //! This allows for chaining methods without needing to intersperse `.unwrap()` or `.expect()` calls everywhere.
-//! 
+//!
 //! # Example
-//! 
+//!
 //! ```rust
 //! use cmdtree::*;
-//! 
+//!
 //! let cmder = Builder::default_config("cmdtree-example")
 //!     .begin_class("class1", "class1 help message")
 //!         .begin_class("inner-class1", "nested class!")
@@ -22,29 +22,29 @@ use super::*;
 /// The persistent `Builder` structure to construct a `Commander` command tree.
 /// See module level documentation for more information.
 #[derive(Debug, PartialEq)]
-pub struct Builder<'a, R> {
-    parents: Vec<SubClass<'a, R>>,
-    current: SubClass<'a, R>,
+pub struct Builder<R> {
+    parents: Vec<SubClass<R>>,
+    current: SubClass<R>,
 }
 
 /// The common functions across a `Builder` or a `BuilderResult`.
 /// See module level documentation for more information.
-pub trait BuilderChain<'a, R> {
+pub trait BuilderChain<R> {
     /// Start a new nested class. If the name already exists a `BuildError` will be returned.
-    fn begin_class(self, name: &str, help_msg: &'a str) -> BuilderResult<'a, R>;
+    fn begin_class<H: Into<CmdStr>>(self, name: &str, help_msg: H) -> BuilderResult<R>;
     /// Close a class and move to it's parent.
     /// If no parent exists (this function is called on the root), a `BuildError` will be returned.
-    fn end_class(self) -> BuilderResult<'a, R>;
+    fn end_class(self) -> BuilderResult<R>;
     /// Add an action. The closure type gives the arguments after the action command as an array of strings.
-    fn add_action<F: FnMut(&mut dyn Write, &[&str]) -> R + Send + 'a>(
+    fn add_action<H: Into<CmdStr>, F: FnMut(&mut dyn Write, &[&str]) -> R + Send + 'static>(
         self,
         name: &str,
-        help_msg: &'a str,
+        help_msg: H,
         closure: F,
-    ) -> BuilderResult<'a, R>;
+    ) -> BuilderResult<R>;
 
     /// Navigates to the root class, closing out the classes as it goes.
-    fn root(self) -> BuilderResult<'a, R>;
+    fn root(self) -> BuilderResult<R>;
 
     /// Finishes the construction of the command tree and returns the build `Commander`.
     ///
@@ -54,20 +54,20 @@ pub trait BuilderChain<'a, R> {
     ///
     /// If an error is propogating through then the function will error. If there was no error (ie `into_commander` was called on a `Builder` instance)
     /// then this function should not fail.
-    fn into_commander<'c>(self) -> Result<Commander<'a, R>, BuildError>;
+    fn into_commander<'c>(self) -> Result<Commander<R>, BuildError>;
 }
 
 /// The common result of `BuilderChain` functions.
-pub type BuilderResult<'a, R> = Result<Builder<'a, R>, BuildError>;
+pub type BuilderResult<R> = Result<Builder<R>, BuildError>;
 
-impl<'a> Builder<'a, ()> {
+impl Builder<()> {
     /// Initialise a `Builder` instance with the given root name.
     pub fn default_config(root_name: &str) -> Self {
         Builder::<()>::new(root_name)
     }
 }
 
-impl<'a, R> Builder<'a, R> {
+impl<R> Builder<R> {
     /// Initialise new `Builder` instance with no configuration.
     pub fn new(root_name: &str) -> Self {
         Builder {
@@ -77,8 +77,8 @@ impl<'a, R> Builder<'a, R> {
     }
 }
 
-impl<'a, R> BuilderChain<'a, R> for Builder<'a, R> {
-    fn begin_class(mut self, name: &str, help_msg: &'a str) -> BuilderResult<'a, R> {
+impl<R> BuilderChain<R> for Builder<R> {
+    fn begin_class<H: Into<CmdStr>>(mut self, name: &str, help_msg: H) -> BuilderResult<R> {
         check_names(name, &self.current).map(|_| {
             self.parents.push(self.current);
             self.current = SubClass::with_name(name, help_msg);
@@ -86,14 +86,14 @@ impl<'a, R> BuilderChain<'a, R> for Builder<'a, R> {
         })
     }
 
-    fn end_class(mut self) -> BuilderResult<'a, R> {
+    fn end_class(mut self) -> BuilderResult<R> {
         let mut parent = self.parents.pop().ok_or(BuildError::NoParent)?;
         parent.classes.push(Arc::new(self.current)); // push the child class onto the parent's classes vector
         self.current = parent;
         Ok(self)
     }
 
-    fn root(self) -> BuilderResult<'a, R> {
+    fn root(self) -> BuilderResult<R> {
         let mut root = self;
         while root.parents.len() > 0 {
             root = root.end_class().expect("shouldn't dip below zero parents");
@@ -101,21 +101,22 @@ impl<'a, R> BuilderChain<'a, R> for Builder<'a, R> {
         Ok(root)
     }
 
-    fn add_action<F>(mut self, name: &str, help_msg: &'a str, closure: F) -> BuilderResult<'a, R>
+    fn add_action<H, F>(mut self, name: &str, help_msg: H, closure: F) -> BuilderResult<R>
     where
-        F: FnMut(&mut dyn Write, &[&str]) -> R + Send + 'a,
+        H: Into<CmdStr>,
+        F: FnMut(&mut dyn Write, &[&str]) -> R + Send + 'static,
     {
         check_names(name, &self.current).map(|_| {
             self.current.actions.push(Action {
                 name: name.to_lowercase(),
-                help: help_msg,
+                help: help_msg.into(),
                 closure: Mutex::new(Box::new(closure)),
             });
             self
         })
     }
 
-    fn into_commander<'c>(self) -> Result<Commander<'a, R>, BuildError> {
+    fn into_commander<'c>(self) -> Result<Commander<R>, BuildError> {
         let root = self.root()?;
         let rc = Arc::new(root.current);
         Ok(Commander {
@@ -126,34 +127,33 @@ impl<'a, R> BuilderChain<'a, R> for Builder<'a, R> {
     }
 }
 
-impl<'a, R> BuilderChain<'a, R> for BuilderResult<'a, R> {
-    fn begin_class(self, name: &str, help_msg: &'a str) -> BuilderResult<'a, R> {
+impl<R> BuilderChain<R> for BuilderResult<R> {
+    fn begin_class<H: Into<CmdStr>>(self, name: &str, help_msg: H) -> BuilderResult<R> {
         self?.begin_class(name, help_msg)
     }
 
-    fn end_class(self) -> BuilderResult<'a, R> {
+    fn end_class(self) -> BuilderResult<R> {
         self?.end_class()
     }
 
-    fn root(self) -> BuilderResult<'a, R> {
+    fn root(self) -> BuilderResult<R> {
         self?.root()
     }
 
-    fn add_action<F: FnMut(&mut dyn Write, &[&str]) -> R + Send + 'a>(
-        self,
-        name: &str,
-        help_msg: &'a str,
-        closure: F,
-    ) -> BuilderResult<'a, R> {
+    fn add_action<H, F>(self, name: &str, help_msg: H, closure: F) -> BuilderResult<R>
+    where
+        H: Into<CmdStr>,
+        F: FnMut(&mut dyn Write, &[&str]) -> R + Send + 'static,
+    {
         self?.add_action(name, help_msg, closure)
     }
 
-    fn into_commander<'c>(self) -> Result<Commander<'a, R>, BuildError> {
+    fn into_commander<'c>(self) -> Result<Commander<R>, BuildError> {
         self?.into_commander()
     }
 }
 
-fn check_names<R>(name: &str, subclass: &SubClass<'_, R>) -> Result<(), BuildError> {
+fn check_names<R>(name: &str, subclass: &SubClass<R>) -> Result<(), BuildError> {
     let lwr = name.to_lowercase();
     // check names
     if lwr == "help" || lwr == "cancel" || lwr == "c" || lwr == "exit" {
@@ -196,7 +196,7 @@ mod tests {
         );
         sc.actions.push(Action {
             name: "name1".to_string(),
-            help: "adf",
+            help: "adf".into(),
             closure: Mutex::new(Box::new(|_, _| ())),
         });
         assert_eq!(

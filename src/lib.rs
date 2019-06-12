@@ -1,24 +1,24 @@
 //! [![Build Status](https://travis-ci.com/kurtlawrence/cmdtree.svg?branch=master)](https://travis-ci.com/kurtlawrence/cmdtree)
-//! [![Latest Version](https://img.shields.io/crates/v/cmdtree.svg)](https://crates.io/crates/cmdtree) 
-//! [![Rust Documentation](https://img.shields.io/badge/api-rustdoc-blue.svg)](https://docs.rs/cmdtree) 
+//! [![Latest Version](https://img.shields.io/crates/v/cmdtree.svg)](https://crates.io/crates/cmdtree)
+//! [![Rust Documentation](https://img.shields.io/badge/api-rustdoc-blue.svg)](https://docs.rs/cmdtree)
 //! [![codecov](https://codecov.io/gh/kurtlawrence/cmdtree/branch/master/graph/badge.svg)](https://codecov.io/gh/kurtlawrence/cmdtree)
-//! 
+//!
 //! (Rust) commands tree.
-//! 
+//!
 //! See the [rs docs](https://docs.rs/cmdtree/).
 //! Look at progress and contribute on [github.](https://github.com/kurtlawrence/cmdtree)
-//! 
+//!
 //! # cmdtree
-//! 
+//!
 //! Create a tree-like data structure of commands and actions to add an intuitive and interactive experience to an application.
 //! cmdtree uses a builder pattern to make constructing the tree ergonomic.
-//! 
+//!
 //! # Example
-//! 
+//!
 //! ```rust,no_run
 //! extern crate cmdtree;
 //! use cmdtree::*;
-//! 
+//!
 //! fn main() {
 //!   let cmder = Builder::default_config("cmdtree-example")
 //!     .begin_class("class1", "class1 help message") // a class
@@ -48,13 +48,13 @@
 //!     })
 //!     .into_commander() // can short-circuit the closing out of classes
 //!     .unwrap();
-//! 
+//!
 //!   cmder.run(); // run interactively
 //! }
 //! ```
-//! 
+//!
 //! Now run and in your shell:
-//! 
+//!
 //! ```sh
 //! cmdtree-example=> help            <-- Will print help messages
 //! help -- prints the help messages
@@ -92,10 +92,12 @@
 
 #![warn(missing_docs)]
 
+use std::borrow::Cow;
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
 use std::fmt;
 use std::io::Write;
+use std::ops::Deref;
 use std::sync::{Arc, Mutex};
 
 pub mod builder;
@@ -111,13 +113,13 @@ pub use builder::{BuildError, Builder, BuilderChain};
 /// Alternatively, `parse_line` can be used to simulate a read input and update the command tree position.
 ///
 /// To construct a command tree, look at the [`builder` module](./builder/index.html).
-pub struct Commander<'r, R> {
-    root: Arc<SubClass<'r, R>>,
-    current: Arc<SubClass<'r, R>>,
+pub struct Commander<R> {
+    root: Arc<SubClass<R>>,
+    current: Arc<SubClass<R>>,
     path: String,
 }
 
-impl<'r, R> Commander<'r, R> {
+impl<R> Commander<R> {
     /// Return the root name.
     ///
     /// # Example
@@ -206,7 +208,7 @@ impl<'r, R> Commander<'r, R> {
     /// 	"one.two",
     /// ]);
     /// ```
-    pub fn structure(&self, from_root: bool) -> BTreeSet<StructureInfo<'r>> {
+    pub fn structure(&self, from_root: bool) -> BTreeSet<StructureInfo> {
         let mut set = BTreeSet::new();
 
         let mut stack: Vec<(String, _)> = {
@@ -216,7 +218,7 @@ impl<'r, R> Commander<'r, R> {
                 set.insert(StructureInfo {
                     path: format!("..{}", action.name),
                     itemtype: ItemType::Action,
-                    help_msg: action.help,
+                    help_msg: action.help.clone(),
                 });
             }
 
@@ -230,7 +232,7 @@ impl<'r, R> Commander<'r, R> {
                 set.insert(StructureInfo {
                     path: format!("{}..{}", parent_path, action.name),
                     itemtype: ItemType::Action,
-                    help_msg: action.help,
+                    help_msg: action.help.clone(),
                 });
             }
 
@@ -241,7 +243,7 @@ impl<'r, R> Commander<'r, R> {
             set.insert(StructureInfo {
                 path: parent_path,
                 itemtype: ItemType::Class,
-                help_msg: parent.help,
+                help_msg: parent.help.clone(),
             });
         }
 
@@ -250,25 +252,25 @@ impl<'r, R> Commander<'r, R> {
 }
 
 #[derive(Debug, Eq)]
-struct SubClass<'a, R> {
+struct SubClass<R> {
     name: String,
-    help: &'a str,
-    classes: Vec<Arc<SubClass<'a, R>>>,
-    actions: Vec<Action<'a, R>>,
+    help: CmdStr,
+    classes: Vec<Arc<SubClass<R>>>,
+    actions: Vec<Action<R>>,
 }
 
-impl<'a, R> SubClass<'a, R> {
-    fn with_name(name: &str, help_msg: &'a str) -> Self {
+impl<R> SubClass<R> {
+    fn with_name<H: Into<CmdStr>>(name: &str, help_msg: H) -> Self {
         SubClass {
             name: name.to_lowercase(),
-            help: help_msg,
+            help: help_msg.into(),
             classes: Vec::new(),
             actions: Vec::new(),
         }
     }
 }
 
-impl<'a, R> PartialEq for SubClass<'a, R> {
+impl<R> PartialEq for SubClass<R> {
     fn eq(&self, other: &Self) -> bool {
         self.name == other.name
             && self.help == other.help
@@ -277,46 +279,46 @@ impl<'a, R> PartialEq for SubClass<'a, R> {
     }
 }
 
-struct Action<'a, R> {
+struct Action<R> {
     name: String,
-    help: &'a str,
-    closure: Mutex<Box<dyn FnMut(&mut dyn Write, &[&str]) -> R + Send + 'a>>,
+    help: CmdStr,
+    closure: Mutex<Box<dyn FnMut(&mut dyn Write, &[&str]) -> R + Send>>,
 }
 
-impl<'a, R> Action<'a, R> {
+impl<R> Action<R> {
     fn call<W: Write>(&self, wtr: &mut W, arguments: &[&str]) -> R {
         let c = &mut *self.closure.lock().expect("locking command action failed");
         c(wtr, arguments)
     }
 }
 
-impl<'a> Action<'a, ()> {
+impl Action<()> {
     #[cfg(test)]
-    fn blank_fn(name: &str, help_msg: &'a str) -> Self {
+    fn blank_fn<H: Into<CmdStr>>(name: &str, help_msg: H) -> Self {
         Action {
             name: name.to_lowercase(),
-            help: help_msg,
+            help: help_msg.into(),
             closure: Mutex::new(Box::new(|_, _| ())),
         }
     }
 }
 
-impl<'a, R> PartialEq for Action<'a, R> {
+impl<R> PartialEq for Action<R> {
     fn eq(&self, other: &Self) -> bool {
         self.name == other.name && self.help == other.help
     }
 }
 
-impl<'a, R> Eq for Action<'a, R> {}
+impl<R> Eq for Action<R> {}
 
-impl<'a, R> fmt::Debug for Action<'a, R> {
+impl<R> fmt::Debug for Action<R> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Action {{ name: {}, help: {} }}", self.name, self.help)
     }
 }
 
 /// An item in the command tree.
-pub struct StructureInfo<'a> {
+pub struct StructureInfo {
     /// Period delimited path. Actions are double delimted.
     ///
     /// Eg.
@@ -326,24 +328,24 @@ pub struct StructureInfo<'a> {
     /// Class or Action.
     pub itemtype: ItemType,
     /// The help message.
-    pub help_msg: &'a str,
+    pub help_msg: CmdStr,
 }
 
-impl<'a> PartialEq for StructureInfo<'a> {
+impl PartialEq for StructureInfo {
     fn eq(&self, other: &StructureInfo) -> bool {
         self.path == other.path
     }
 }
 
-impl<'a> Eq for StructureInfo<'a> {}
+impl Eq for StructureInfo {}
 
-impl<'a> PartialOrd for StructureInfo<'a> {
+impl PartialOrd for StructureInfo {
     fn partial_cmp(&self, other: &StructureInfo) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl<'a> Ord for StructureInfo<'a> {
+impl Ord for StructureInfo {
     fn cmp(&self, other: &StructureInfo) -> Ordering {
         self.path.cmp(&other.path)
     }
@@ -358,6 +360,51 @@ pub enum ItemType {
     Action,
 }
 
+/// A command string can be static or owned.
+///
+/// Wraps a `Cow<'static, str>`.
+/// Implements `From<&'static str>` and `From<String>`.
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct CmdStr {
+    inner_cow: Cow<'static, str>,
+}
+
+impl CmdStr {
+    /// Represent a string.
+    pub fn as_str(&self) -> &str {
+        &self.inner_cow
+    }
+}
+
+impl Deref for CmdStr {
+    type Target = str;
+    fn deref(&self) -> &str {
+        self.inner_cow.deref()
+    }
+}
+
+impl fmt::Display for CmdStr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+impl From<&'static str> for CmdStr {
+    fn from(s: &'static str) -> Self {
+        Self {
+            inner_cow: Cow::Borrowed(s),
+        }
+    }
+}
+
+impl From<String> for CmdStr {
+    fn from(s: String) -> Self {
+        Self {
+            inner_cow: Cow::Owned(s),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -366,7 +413,7 @@ mod tests {
     fn subclass_with_name_test() {
         let sc = SubClass::<()>::with_name("NAME", "Help Message");
         assert_eq!(&sc.name, "name");
-        assert_eq!(sc.help, "Help Message");
+        assert_eq!(sc.help.as_str(), "Help Message");
     }
 
     #[test]

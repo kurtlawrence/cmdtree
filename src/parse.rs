@@ -5,12 +5,12 @@ use std::io::{self, Write};
 const PATH_SEP: char = '.';
 
 #[derive(Debug, PartialEq)]
-enum WordResult<'a, 'b, R> {
-    Help(&'b SubClass<'a, R>),
+enum WordResult<'a, R> {
+    Help(&'a SubClass<R>),
     Cancel,
     Exit,
-    Class(&'b Arc<SubClass<'a, R>>),
-    Action(&'b Action<'a, R>),
+    Class(&'a Arc<SubClass<R>>),
+    Action(&'a Action<R>),
     Unrecognized,
 }
 
@@ -43,7 +43,7 @@ impl<R> LineResult<R> {
     }
 }
 
-impl<'r, R> Commander<'r, R> {
+impl<R> Commander<R> {
     /// Parse a line of commands and updates the `Commander` state.
     ///
     /// Parsing a line is akin to sending an input line to the commander in the run loop.
@@ -138,16 +138,16 @@ impl<'r, R> Commander<'r, R> {
     }
 }
 
-fn parse_word<'a, 'b, R>(subclass: &'b SubClass<'a, R>, word: &str) -> WordResult<'a, 'b, R> {
+fn parse_word<'a, R>(subclass: &'a SubClass<R>, word: &str) -> WordResult<'a, R> {
     let lwr = word.to_lowercase();
     match lwr.as_str() {
         "help" => WordResult::Help(subclass),
         "cancel" | "c" => WordResult::Cancel,
         "exit" => WordResult::Exit,
         word => {
-            if let Some(c) = subclass.classes.iter().find(|c| &c.name == word) {
+            if let Some(c) = subclass.classes.iter().find(|c| c.name.as_str() == word) {
                 WordResult::Class(c)
-            } else if let Some(a) = subclass.actions.iter().find(|a| &a.name == word) {
+            } else if let Some(a) = subclass.actions.iter().find(|a| a.name.as_str() == word) {
                 WordResult::Action(a)
             } else {
                 WordResult::Unrecognized
@@ -156,7 +156,7 @@ fn parse_word<'a, 'b, R>(subclass: &'b SubClass<'a, R>, word: &str) -> WordResul
     }
 }
 
-fn write_help_coloured<W: Write, R>(class: &SubClass<'_, R>, writer: &mut W) -> io::Result<()> {
+fn write_help_coloured<W: Write, R>(class: &SubClass<R>, writer: &mut W) -> io::Result<()> {
     writeln!(
         writer,
         "{} -- prints the help messages",
@@ -195,7 +195,7 @@ fn write_help_coloured<W: Write, R>(class: &SubClass<'_, R>, writer: &mut W) -> 
     Ok(())
 }
 
-fn write_help<W: Write, R>(class: &SubClass<'_, R>, writer: &mut W) -> io::Result<()> {
+fn write_help<W: Write, R>(class: &SubClass<R>, writer: &mut W) -> io::Result<()> {
     writeln!(writer, "help -- prints the help messages",)?;
     writeln!(writer, "cancel | c -- returns to the root class",)?;
     writeln!(

@@ -21,11 +21,11 @@ fn main() {
     });
 }
 
-struct TreeCompleter<'a> {
-    items: Vec<CompletionInfo<'a>>,
+struct TreeCompleter {
+    items: Vec<CompletionInfo>,
 }
 
-impl<'a, T: Terminal> Completer<T> for TreeCompleter<'a> {
+impl<T: Terminal> Completer<T> for TreeCompleter {
     fn complete(
         &self,
         _word: &str,
