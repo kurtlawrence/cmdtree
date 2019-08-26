@@ -110,8 +110,6 @@ pub fn create_tree_completion_items<'a, R>(cmdr: &Commander<R>) -> Vec<Completio
                 help_msg,
             } = info;
 
-            dbg!(&path);
-
             let completestr =
                 path.split('.')
                     .filter(|x| !x.is_empty())

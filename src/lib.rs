@@ -366,7 +366,7 @@ pub enum ItemType {
 /// Implements `From<&'static str>` and `From<String>`.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct CmdStr {
-    inner_cow: Cow<'static, str>,
+    pub inner_cow: Cow<'static, str>,
 }
 
 impl CmdStr {
