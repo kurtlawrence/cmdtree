@@ -1,6 +1,6 @@
 [package]
 name = "cmdtree"
-version = "0.9.0"
+version = "0.10.0"
 authors = ["kurt <kurtlawrence92@gmail.com>"]
 description = "(Rust) commands tree"
 license = "MIT"
@@ -13,13 +13,14 @@ edition = "2018"
 
 [badges]
 travis-ci = { repository = "kurtlawrence/cmdtree" }
+codecov =   { repository = "kurtlawrence/cmdtree" }
 
 [dependencies]
-colored = 	{ version = "1.8" }
-linefeed = 	{ version = "0.6",		optional = true }
+colored = 	{ version = "1.8",  default-features = false }
+linefeed = 	{ version = "0.6",  default-features = false,	optional = true }
 
 [dev-dependencies]
-criterion = "0.2"
+criterion =	{ version = "0.3" }
 
 [[bench]]
 name = "benches"
