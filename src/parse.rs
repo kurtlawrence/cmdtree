@@ -56,15 +56,15 @@ impl<R> Commander<R> {
     /// ```rust
     /// use cmdtree::*;
     /// let mut cmder = Builder::default_config("base")
-    ///		.begin_class("one", "")
-    ///		.begin_class("two", "")
-    /// 	.add_action("echo", "", |_wtr, args| println!("{}", args.join(" ")))
-    ///		.into_commander().unwrap();
+    ///        .begin_class("one", "")
+    ///        .begin_class("two", "")
+    ///     .add_action("echo", "", |_wtr, args| println!("{}", args.join(" ")))
+    ///        .into_commander().unwrap();
     ///
-    ///	assert_eq!(cmder.path(), "base");
-    ///	cmder.parse_line("one two", true,  &mut std::io::sink());
-    ///	assert_eq!(cmder.path(), "base.one.two");
-    /// cmder.parse_line("echo Hello, world!", true, &mut std::io::sink());	// should print "Hello, world!"
+    ///    assert_eq!(cmder.path(), "base");
+    ///    cmder.parse_line("one two", true,  &mut std::io::sink());
+    ///    assert_eq!(cmder.path(), "base.one.two");
+    /// cmder.parse_line("echo Hello, world!", true, &mut std::io::sink());    // should print "Hello, world!"
     /// ```
     pub fn parse_line<W: Write>(
         &mut self,
@@ -92,7 +92,7 @@ impl<R> Commander<R> {
                         write_help(&sc, writer).expect("failed writing output to writer");
                     }
                     self.current = Arc::clone(&start_class);
-                    self.path = start_path.clone();
+                    self.path = start_path;
                     return LineResult::Help;
                 }
                 WordResult::Cancel => {
@@ -112,7 +112,7 @@ impl<R> Commander<R> {
                     let slice = &words[idx..];
                     let r = a.call(writer, slice);
                     self.current = Arc::clone(&start_class);
-                    self.path = start_path.clone();
+                    self.path = start_path;
                     return LineResult::Action(r);
                 }
                 WordResult::Unrecognized => {
@@ -128,7 +128,7 @@ impl<R> Commander<R> {
 
                     writeln!(writer, "{}", s).expect("failed writing output to writer");
                     self.current = Arc::clone(&start_class);
-                    self.path = start_path.clone();
+                    self.path = start_path;
                     return LineResult::Unrecognized;
                 }
             };
@@ -173,14 +173,14 @@ fn write_help_coloured<W: Write, R>(class: &SubClass<R>, writer: &mut W) -> io::
         "{} -- sends the exit signal to end the interactive loop",
         "exit".bright_yellow()
     )?;
-    if class.classes.len() > 0 {
+    if !class.classes.is_empty() {
         writeln!(writer, "{}", "Classes:".bright_purple())?;
         for class in class.classes.iter() {
             writeln!(writer, "\t{} -- {}", class.name.bright_yellow(), class.help)?;
         }
     }
 
-    if class.actions.len() > 0 {
+    if !class.actions.is_empty() {
         writeln!(writer, "{}", "Actions:".bright_purple())?;
         for action in class.actions.iter() {
             writeln!(
@@ -202,15 +202,15 @@ fn write_help<W: Write, R>(class: &SubClass<R>, writer: &mut W) -> io::Result<()
         writer,
         "exit -- sends the exit signal to end the interactive loop",
     )?;
-    if class.classes.len() > 0 {
-        writeln!(writer, "{}", "Classes:")?;
+    if !class.classes.is_empty() {
+        writeln!(writer, "Classes:")?;
         for class in class.classes.iter() {
             writeln!(writer, "\t{} -- {}", class.name, class.help)?;
         }
     }
 
-    if class.actions.len() > 0 {
-        writeln!(writer, "{}", "Actions:")?;
+    if !class.actions.is_empty() {
+        writeln!(writer, "Actions:")?;
         for action in class.actions.iter() {
             writeln!(writer, "\t{} -- {}", action.name, action.help)?;
         }

@@ -126,11 +126,11 @@ impl<R> Commander<R> {
     /// ```rust
     /// # use cmdtree::*;
     /// let mut cmder = Builder::default_config("base")
-    ///		.begin_class("one", "")
-    ///		.begin_class("two", "")
-    ///		.into_commander().unwrap();
+    ///        .begin_class("one", "")
+    ///        .begin_class("two", "")
+    ///        .into_commander().unwrap();
     ///
-    ///	assert_eq!(cmder.root_name(), "base");
+    /// assert_eq!(cmder.root_name(), "base");
     /// ```
     pub fn root_name(&self) -> &str {
         &self.root.name
@@ -142,13 +142,13 @@ impl<R> Commander<R> {
     /// ```rust
     /// # use cmdtree::*;
     /// let mut cmder = Builder::default_config("base")
-    ///		.begin_class("one", "")
-    ///		.begin_class("two", "")
-    ///		.into_commander().unwrap();
+    ///        .begin_class("one", "")
+    ///        .begin_class("two", "")
+    ///        .into_commander().unwrap();
     ///
-    ///	assert_eq!(cmder.path(), "base");
-    ///	cmder.parse_line("one two", true,  &mut std::io::sink());
-    ///	assert_eq!(cmder.path(), "base.one.two");
+    /// assert_eq!(cmder.path(), "base");
+    /// cmder.parse_line("one two", true,  &mut std::io::sink());
+    /// assert_eq!(cmder.path(), "base.one.two");
     /// ```
     pub fn path(&self) -> &str {
         &self.path
@@ -160,13 +160,13 @@ impl<R> Commander<R> {
     /// ```rust
     /// # use cmdtree::*;
     /// let mut cmder = Builder::default_config("base")
-    ///		.begin_class("one", "")
-    ///		.begin_class("two", "")
-    ///		.into_commander().unwrap();
+    ///        .begin_class("one", "")
+    ///        .begin_class("two", "")
+    ///        .into_commander().unwrap();
     ///
-    ///	assert!(cmder.at_root());
-    ///	cmder.parse_line("one two", true,  &mut std::io::sink());
-    ///	assert_eq!(cmder.at_root(), false);
+    /// assert!(cmder.at_root());
+    /// cmder.parse_line("one two", true,  &mut std::io::sink());
+    /// assert_eq!(cmder.at_root(), false);
     /// ```
     pub fn at_root(&self) -> bool {
         self.current == self.root
@@ -191,21 +191,21 @@ impl<R> Commander<R> {
     /// ```rust
     /// # use cmdtree::*;
     /// let cmder = Builder::default_config("base")
-    ///		.begin_class("one", "")
-    ///		.begin_class("two", "")
-    /// 	.end_class()
-    /// 	.add_action("action", "", |_,_| ())
-    /// 	.end_class()
-    /// 	.add_action("action", "", |_,_| ())
-    ///		.into_commander().unwrap();
+    ///        .begin_class("one", "")
+    ///        .begin_class("two", "")
+    ///     .end_class()
+    ///     .add_action("action", "", |_,_| ())
+    ///     .end_class()
+    ///     .add_action("action", "", |_,_| ())
+    ///        .into_commander().unwrap();
     ///
     /// let structure = cmder.structure(true);
     ///
     /// assert_eq!(structure.iter().map(|x| x.path.as_str()).collect::<Vec<_>>(), vec![
-    /// 	"..action",
-    /// 	"one",
-    /// 	"one..action",
-    /// 	"one.two",
+    ///     "..action",
+    ///     "one",
+    ///     "one..action",
+    ///     "one.two",
     /// ]);
     /// ```
     pub fn structure(&self, from_root: bool) -> BTreeSet<StructureInfo> {
@@ -279,10 +279,11 @@ impl<R> PartialEq for SubClass<R> {
     }
 }
 
+type ClosureFn<R> = Box<dyn FnMut(&mut dyn Write, &[&str]) -> R + Send>;
 struct Action<R> {
     name: String,
     help: CmdStr,
-    closure: Mutex<Box<dyn FnMut(&mut dyn Write, &[&str]) -> R + Send>>,
+    closure: Mutex<ClosureFn<R>>,
 }
 
 impl<R> Action<R> {

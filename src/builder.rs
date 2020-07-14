@@ -54,7 +54,7 @@ pub trait BuilderChain<R> {
     ///
     /// If an error is propogating through then the function will error. If there was no error (ie `into_commander` was called on a `Builder` instance)
     /// then this function should not fail.
-    fn into_commander<'c>(self) -> Result<Commander<R>, BuildError>;
+    fn into_commander(self) -> Result<Commander<R>, BuildError>;
 }
 
 /// The common result of `BuilderChain` functions.
@@ -95,7 +95,7 @@ impl<R> BuilderChain<R> for Builder<R> {
 
     fn root(self) -> BuilderResult<R> {
         let mut root = self;
-        while root.parents.len() > 0 {
+        while !root.parents.is_empty() {
             root = root.end_class().expect("shouldn't dip below zero parents");
         }
         Ok(root)
@@ -156,9 +156,12 @@ impl<R> BuilderChain<R> for BuilderResult<R> {
 fn check_names<R>(name: &str, subclass: &SubClass<R>) -> Result<(), BuildError> {
     let lwr = name.to_lowercase();
     // check names
-    if lwr == "help" || lwr == "cancel" || lwr == "c" || lwr == "exit" {
-        Err(BuildError::NameExistsAsAction)
-    } else if subclass.actions.iter().any(|x| x.name == lwr) {
+    if lwr == "help"
+        || lwr == "cancel"
+        || lwr == "c"
+        || lwr == "exit"
+        || subclass.actions.iter().any(|x| x.name == lwr)
+    {
         Err(BuildError::NameExistsAsAction)
     } else if subclass.classes.iter().any(|x| x.name == lwr) {
         Err(BuildError::NameExistsAsClass)

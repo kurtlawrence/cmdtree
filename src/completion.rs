@@ -32,15 +32,11 @@ impl<'r, R> Commander<R> {
             let completer = completer_fn(&self);
             interface.set_completer(Arc::new(completer));
 
-            match interface.read_line() {
-                Ok(ReadResult::Input(s)) => {
-                    match self.parse_line(&s, true, &mut std::io::stdout()) {
-                        LineResult::Exit => exit = true,
-                        _ => (),
-                    }
-                    interface.add_history_unique(s);
+            if let Ok(ReadResult::Input(s)) = interface.read_line() {
+                if let LineResult::Exit = self.parse_line(&s, true, &mut std::io::stdout()) {
+                    exit = true
                 }
-                _ => (),
+                interface.add_history_unique(s);
             }
         }
     }
@@ -82,25 +78,25 @@ pub struct CompletionInfo {
 /// # use cmdtree::completion::create_tree_completion_items;
 ///
 /// let mut cmder = Builder::default_config("eg")
-/// 	.begin_class("one", "") // a class
-/// 		.begin_class("two", "")
-/// 		.add_action("three", "", |_, _| ())
-/// 		.end_class()
-/// 	.end_class()
-/// 	.begin_class("hello", "").end_class()
-/// 	.into_commander().unwrap();
+///     .begin_class("one", "") // a class
+///         .begin_class("two", "")
+///         .add_action("three", "", |_, _| ())
+///         .end_class()
+///     .end_class()
+///     .begin_class("hello", "").end_class()
+///     .into_commander().unwrap();
 ///
 /// let v: Vec<_> = create_tree_completion_items(&cmder).into_iter().map(|x| x.completestr).collect();
 /// assert_eq!(v, vec!["hello", "one", "one two", "one two three"]
-/// 	.into_iter().map(|x| x.to_string()).collect::<Vec<_>>());
+///     .into_iter().map(|x| x.to_string()).collect::<Vec<_>>());
 ///
 /// cmder.parse_line("one", true, &mut std::io::sink());
 ///
 /// let v: Vec<_> = create_tree_completion_items(&cmder).into_iter().map(|x| x.completestr).collect();
 /// assert_eq!(v, vec!["two", "two three"]
-/// 	.into_iter().map(|x| x.to_string()).collect::<Vec<_>>());
+///     .into_iter().map(|x| x.to_string()).collect::<Vec<_>>());
 /// ```
-pub fn create_tree_completion_items<'a, R>(cmdr: &Commander<R>) -> Vec<CompletionInfo> {
+pub fn create_tree_completion_items<R>(cmdr: &Commander<R>) -> Vec<CompletionInfo> {
     cmdr.structure(false)
         .into_iter()
         .filter_map(|info| {
@@ -114,7 +110,7 @@ pub fn create_tree_completion_items<'a, R>(cmdr: &Commander<R>) -> Vec<Completio
                 path.split('.')
                     .filter(|x| !x.is_empty())
                     .fold(String::new(), |mut s, x| {
-                        if s.len() != 0 {
+                        if !s.is_empty() {
                             s.push(' ');
                         }
                         s.push_str(x);
@@ -136,7 +132,7 @@ pub fn create_tree_completion_items<'a, R>(cmdr: &Commander<R>) -> Vec<Completio
 
 /// Constructs a set of space delimited actions that could be completed at the
 /// current path.
-pub fn create_action_completion_items<'a, R>(cmdr: &Commander<R>) -> Vec<ActionMatch> {
+pub fn create_action_completion_items<R>(cmdr: &Commander<R>) -> Vec<ActionMatch> {
     let cpath = cmdr.path();
     let rname = cmdr.root_name();
 
