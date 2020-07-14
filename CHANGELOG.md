@@ -4,6 +4,9 @@
 
 - Remove lifetime parameter from most of cmdtree aspects.
 
+### 0.10.1
+- Update dependencies
+
 ## 0.9.0
 
 - Structure and completion aspects now return specific data types with more information such as the item type and the help message.

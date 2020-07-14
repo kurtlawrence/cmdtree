@@ -1,6 +1,6 @@
 [package]
 name = "cmdtree"
-version = "0.10.0"
+version = "0.10.1"
 authors = ["kurt <kurtlawrence92@gmail.com>"]
 description = "(Rust) commands tree"
 license = "MIT"
@@ -16,7 +16,7 @@ travis-ci = { repository = "kurtlawrence/cmdtree" }
 codecov =   { repository = "kurtlawrence/cmdtree" }
 
 [dependencies]
-colored = 	{ version = "1.8",  default-features = false }
+colored = 	{ version = "2",  default-features = false }
 linefeed = 	{ version = "0.6",  default-features = false,	optional = true }
 
 [dev-dependencies]
